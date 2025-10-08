@@ -42,18 +42,9 @@ jobs:
 
       - name: Install dependencies (web/)
         run: |
-          echo "Pre-install diagnostics (absolute paths):"
-          echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
-          echo "PWD=$(pwd)"
-          echo "--- listing GITHUB_WORKSPACE ---"
-          ls -la "$GITHUB_WORKSPACE"
           echo "--- listing GITHUB_WORKSPACE/web ---"
           ls -la "$GITHUB_WORKSPACE/web" || { echo "web directory missing or empty at $GITHUB_WORKSPACE/web"; exit 1; }
-          echo "--- git tracked files (top 200) ---"
-          git ls-files | head -n 200 || true
-          echo "cd into absolute web directory and install"
-          cd "$GITHUB_WORKSPACE/web"
-          ls -la
+
           if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
             npm ci
           else
