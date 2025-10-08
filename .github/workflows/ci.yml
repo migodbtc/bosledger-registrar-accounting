@@ -42,7 +42,15 @@ jobs:
 
       - name: Install dependencies (web/)
         working-directory: web
-        run: npm ci
+        run: |
+          # Use npm ci when a lockfile is present for reproducible installs,
+          # otherwise fall back to npm install so CI won't fail in repos
+          # missing a lockfile.
+          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+            npm ci
+          else
+            npm install
+          fi
 
       - name: Lint (web/)
         working-directory: web
