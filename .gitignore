@@ -1,0 +1,74 @@
+# Root .gitignore for monorepo
+
+# Node
+node_modules/
+web/node_modules/
+
+# Build / output
+dist/
+build/
+web/dist/
+out/
+.next/
+.venv/
+
+# Vite / caches
+.vite/
+web/.vite/
+.cache/
+.cache-loader/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Environment files
+.env
+.env.*.local
+*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.iml
+
+# TypeScript / build artifacts
+*.tsbuildinfo
+
+# Pack / archive files
+*.tgz
+
+# Test artifacts
+playwright-report/
+test-results/
+
+# Secrets / keys
+*.pem
+*.key
+
+# Misc
+*.cache
+/.parcel-cache
+/.pnp
+.pnp.js
+
+# Ignore web-specific build artifact (in case web/.gitignore is missing)
+web/dist/
