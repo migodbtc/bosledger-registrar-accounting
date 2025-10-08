@@ -25,6 +25,21 @@ jobs:
           submodules: false
           fetch-depth: 0
 
+      - name: Debug checkout (print workspace)
+        run: |
+          echo "GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
+          pwd
+          echo "--- root listing ---"
+          ls -la
+          if [ -d web ]; then
+            echo "--- web listing ---"
+            ls -la web
+            echo "--- web/package.json ---"
+            ls -la web/package.json || echo "web/package.json not found"
+          else
+            echo "web directory not present"
+          fi
+
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
@@ -41,15 +56,19 @@ jobs:
             ${{ runner.os }}-web-${{ matrix.node-version }}-
 
       - name: Install dependencies (web/)
-        working-directory: web
         run: |
-          # Use npm ci when a lockfile is present for reproducible installs,
-          # otherwise fall back to npm install so CI won't fail in repos
-          # missing a lockfile.
-          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
-            npm ci
+          # Ensure web/package.json exists before cd'ing; provide clear logs if missing
+          if [ -f web/package.json ]; then
+            cd web
+            if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+              npm ci
+            else
+              npm install
+            fi
           else
-            npm install
+            echo "web/package.json not found in repository. Listing workspace for debugging:"
+            ls -la
+            exit 1
           fi
 
       - name: Lint (web/)
