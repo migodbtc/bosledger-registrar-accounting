@@ -43,8 +43,7 @@ jobs:
       - name: Install dependencies (web/)
         working-directory: web
         run: |
-          echo "--- listing GITHUB_WORKSPACE/web ---"
-          ls -la "$GITHUB_WORKSPACE/web" || { echo "web directory missing or empty at $GITHUB_WORKSPACE/web"; exit 1; }
+          echo "Current path: $(pwd)"
 
           if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
             npm ci
