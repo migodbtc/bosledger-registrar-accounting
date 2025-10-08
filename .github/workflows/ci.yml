@@ -22,8 +22,30 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          submodules: false
           fetch-depth: 0
+          # allow submodules; we'll init only if present to avoid surprises
+          submodules: recursive
+
+      - name: Ensure submodules (if any) are initialized
+        run: |
+          # If web is a submodule (gitlink), initialize it so the folder is populated
+          if git ls-files --stage web | grep -q "160000"; then
+            echo "web appears to be a gitlink/submodule; initializing submodules"
+            git submodule update --init --recursive || true
+          else
+            echo "web is not a submodule gitlink"
+          fi
+
+      - name: Show repo layout (diagnostic)
+        run: |
+          echo "GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
+          echo "PWD: $(pwd)"
+          echo "--- root listing ---"
+          ls -la || true
+          echo "--- web listing ---"
+          ls -la web || true
+          echo "--- git ls-files web ---"
+          git ls-files web || true
 
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
@@ -42,13 +64,20 @@ jobs:
 
       - name: Install dependencies (web/)
         run: |
+          echo "PWD: $(pwd)"
           echo "--- listing GITHUB_WORKSPACE/web ---"
           ls -la "$GITHUB_WORKSPACE/web" || { echo "web directory missing or empty at $GITHUB_WORKSPACE/web"; exit 1; }
 
-          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
-            npm ci
+          if [ ! -f web/package.json ]; then
+            echo "::error::web/package.json not found. Ensure web is committed or submodule initialized." 
+            ls -la web || true
+            exit 1
+          fi
+
+          if [ -f web/package-lock.json ] || [ -f web/npm-shrinkwrap.json ]; then
+            npm ci --prefix web
           else
-            npm install
+            npm install --prefix web
           fi
 
       - name: Lint (web/)
