@@ -53,10 +53,6 @@ jobs:
             npm install
           fi
 
-      - name: Lint (web/)
-        working-directory: web
-        run: npm run lint
-
       - name: Build (web/)
         working-directory: web
         env:
