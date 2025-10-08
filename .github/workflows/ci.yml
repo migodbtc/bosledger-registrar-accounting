@@ -44,6 +44,8 @@ jobs:
         working-directory: web
         run: |
           echo "Current path: $(pwd)"
+          echo "--- Path contents ---"
+          ls -la
 
           if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
             npm ci
