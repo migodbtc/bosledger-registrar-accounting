@@ -56,19 +56,13 @@ jobs:
             ${{ runner.os }}-web-${{ matrix.node-version }}-
 
       - name: Install dependencies (web/)
+        working-directory: web
         run: |
-          # Ensure web/package.json exists before cd'ing; provide clear logs if missing
-          if [ -f web/package.json ]; then
-            cd web
-            if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
-              npm ci
-            else
-              npm install
-            fi
+          # Run npm in the web directory. Prefer `npm ci` when a lockfile is present
+          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+            npm ci
           else
-            echo "web/package.json not found in repository. Listing workspace for debugging:"
-            ls -la
-            exit 1
+            npm install
           fi
 
       - name: Lint (web/)
