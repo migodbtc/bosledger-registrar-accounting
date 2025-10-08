@@ -1,0 +1,309 @@
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faBook,
+  faHome,
+  faUsers,
+  faGraduationCap,
+  faBookOpen,
+  faUserGraduate,
+  faCreditCard,
+  faMoneyBill,
+  faChartBar,
+  faUser,
+  faChevronRight,
+  faSignOut,
+} from "@fortawesome/free-solid-svg-icons";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarTrigger,
+  useSidebar,
+} from "@/components/ui/sidebar";
+
+const navigationItems = [
+  {
+    title: "Overview",
+    items: [
+      { title: "Dashboard", url: "/dashboard", icon: faHome },
+      {
+        title: "My Dashboard",
+        url: "/dashboard/student",
+        icon: faUserGraduate,
+      },
+    ],
+  },
+  {
+    title: "Academic Management",
+    items: [
+      { title: "Students", url: "/students", icon: faUsers },
+      { title: "Courses", url: "/courses", icon: faGraduationCap },
+      { title: "Subjects", url: "/subjects", icon: faBookOpen },
+      { title: "Enrollments", url: "/enrollments", icon: faUserGraduate },
+      { title: "My Enrollments", url: "/my/enrollments", icon: faBook },
+    ],
+  },
+  {
+    title: "Financial Management",
+    items: [
+      { title: "Payments", url: "/payments", icon: faCreditCard },
+      { title: "Balances", url: "/balances", icon: faMoneyBill },
+      { title: "My Payments", url: "/my/payments", icon: faCreditCard },
+      { title: "My Balances", url: "/my/balances", icon: faMoneyBill },
+      { title: "Reports", url: "/reports", icon: faChartBar },
+    ],
+  },
+  {
+    title: "Account",
+    items: [{ title: "Profile", url: "/profile", icon: faUser }],
+  },
+];
+
+export function AppSidebar() {
+  const { state } = useSidebar();
+  const location = useLocation();
+  const currentPath = location.pathname;
+  const collapsed = state === "collapsed";
+  const { userProfile } = useAuth();
+  const role: string | null = userProfile?.role ?? null;
+
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    try {
+      // suppress ProtectedRoute's access-denied toast which would trigger
+      // after signOut clears the user session
+      try {
+        sessionStorage.setItem("suppressProtectedToast", "1");
+      } catch (err) {
+        // ignore
+      }
+      await signOut();
+      navigate("/");
+    } catch (err) {
+      console.error("Sign out error", err);
+    }
+  };
+
+  const isActive = (path: string) => currentPath === path;
+
+  const filterItemsByRole = (items: any[]) => {
+    // role rules (summary):
+    // - all users can see Profile
+    // - students: see student dashboard (/dashboard/student) and personal routes (/my/*)
+    // - registrar: see shared dashboard (/dashboard) and academic/registrar features; DO NOT see student personal routes (/my/*) or student dashboard
+    // - accounting: see shared dashboard (/dashboard) and accounting features; DO NOT see student personal routes (/my/*) or student dashboard
+    // - admin/superadmin: full access
+    if (!role) return items; // unauthenticated or unknown role -> show default
+
+    const isAdmin = role === "admin" || role === "superadmin";
+    // Admins: full functional access except student personal routes (/my/*)
+    if (isAdmin) {
+      return items.filter((i) => {
+        const u = (i && i.url) || "";
+        return !u.startsWith("/my");
+      });
+    }
+
+    return items.filter((item) => {
+      const url: string = item.url;
+      // allow profile for all authenticated roles
+      if (url === "/profile") return true;
+
+      // Student: only their personal pages and their student dashboard
+      if (role === "student") {
+        return url.startsWith("/my") || url === "/dashboard/student";
+      }
+
+      // Registrar: show shared dashboard and academic/registrar features.
+      // Block accounting and any personal student routes.
+      if (role === "registrar") {
+        if (url.startsWith("/my")) return false; // personal student-only routes
+        if (
+          url.startsWith("/payments") ||
+          url.startsWith("/balances") ||
+          url.startsWith("/reports")
+        )
+          return false; // block accounting
+        // explicitly block student-dashboard route
+        if (url === "/dashboard/student") return false;
+        return true;
+      }
+
+      // Accounting: show shared dashboard and accounting features only
+      if (role === "accounting") {
+        if (url === "/dashboard") return true;
+        if (
+          url.startsWith("/payments") ||
+          url.startsWith("/balances") ||
+          url.startsWith("/reports")
+        )
+          return true;
+        // allow viewing student list for accounting when needed
+        if (url === "/students") return true;
+        // block student personal and student dashboard routes
+        return false;
+      }
+
+      // fallback: hide by default
+      return false;
+    });
+  };
+
+  return (
+    <Sidebar
+      className={`border-r transition-all duration-300 ${
+        collapsed ? "w-16" : "w-64"
+      }`}
+    >
+      <div className={`p-4 ${collapsed ? "px-2" : "px-6"}`}>
+        <div className="flex items-center justify-center space-x-3">
+          <div className="w-10 h-10 rounded-xl hypatia-gradient-bg flex items-center justify-center flex-shrink-0">
+            <FontAwesomeIcon icon={faBook} className="text-white text-lg" />
+          </div>
+          {!collapsed && (
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <h1 className="text-xl font-bold text-foreground">Bosledger</h1>
+              <p className="text-xs text-muted-foreground">
+                Registrar & Accounting
+              </p>
+            </motion.div>
+          )}
+        </div>
+      </div>
+
+      <SidebarContent className={`${collapsed ? "px-2" : "px-4"}`}>
+        {navigationItems.map((group, groupIndex) => {
+          const filtered = { ...group, items: filterItemsByRole(group.items) };
+          if (!filtered.items || filtered.items.length === 0) return null;
+          const groupToRender = filtered;
+          return (
+            <SidebarGroup key={group.title} className="mb-2">
+              {!collapsed && (
+                <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                  {groupToRender.title}
+                </SidebarGroupLabel>
+              )}
+              <SidebarGroupContent>
+                <SidebarMenu className="space-y-1">
+                  {groupToRender.items.map((item: any) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        asChild
+                        className={`w-full ${
+                          collapsed ? "justify-center p-2" : "justify-start p-3"
+                        } rounded-lg transition-all duration-200 ${
+                          isActive(item.url)
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "hover:bg-accent hover:text-accent-foreground"
+                        }`}
+                      >
+                        {/* If the item is the generic dashboard link, point it to the
+                              role-specific default if the current user is a student. */}
+                        <NavLink
+                          to={
+                            item.url === "/dashboard"
+                              ? role === "student"
+                                ? "/dashboard/student"
+                                : "/dashboard"
+                              : item.url
+                          }
+                          className={`flex items-center ${
+                            collapsed ? "justify-center" : "space-x-3"
+                          } relative group`}
+                          title={collapsed ? item.title : undefined}
+                        >
+                          <FontAwesomeIcon
+                            icon={item.icon}
+                            className="text-base flex-shrink-0"
+                          />
+                          {!collapsed && (
+                            <motion.span
+                              className="font-medium"
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              {item.title}
+                            </motion.span>
+                          )}
+                          {!collapsed && isActive(item.url) && (
+                            <motion.div
+                              className="ml-auto"
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <FontAwesomeIcon
+                                icon={faChevronRight}
+                                className="text-xs"
+                              />
+                            </motion.div>
+                          )}
+                          {/* Tooltip for collapsed state */}
+                          {collapsed && (
+                            <div className="absolute left-full ml-2 px-3 py-1 bg-primary text-primary-foreground text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                              {item.title}
+                            </div>
+                          )}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          );
+        })}
+      </SidebarContent>
+
+      {/* Sidebar Footer */}
+      <div className={`p-4 border-t ${collapsed ? "px-2" : ""}`}>
+        <button
+          type="button"
+          onClick={handleSignOut}
+          className={`flex items-center ${
+            collapsed ? "justify-center p-2" : "space-x-3 p-3"
+          } w-full rounded-lg hover:bg-destructive/10 hover:text-destructive transition-colors duration-200 group relative`}
+          title={collapsed ? "Sign Out" : undefined}
+        >
+          <FontAwesomeIcon
+            icon={faSignOut}
+            className="text-base flex-shrink-0"
+          />
+          {!collapsed && (
+            <motion.span
+              className="font-medium"
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              Sign Out
+            </motion.span>
+          )}
+          {/* Tooltip for collapsed state */}
+          {collapsed && (
+            <div className="absolute left-full ml-2 px-3 py-1 bg-destructive text-destructive-foreground text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+              Sign Out
+            </div>
+          )}
+        </button>
+      </div>
+    </Sidebar>
+  );
+}
