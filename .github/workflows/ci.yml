@@ -25,21 +25,6 @@ jobs:
           submodules: false
           fetch-depth: 0
 
-      - name: Debug checkout (print workspace)
-        run: |
-          echo "GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
-          pwd
-          echo "--- root listing ---"
-          ls -la
-          if [ -d web ]; then
-            echo "--- web listing ---"
-            ls -la web
-            echo "--- web/package.json ---"
-            ls -la web/package.json || echo "web/package.json not found"
-          else
-            echo "web directory not present"
-          fi
-
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
@@ -58,7 +43,8 @@ jobs:
       - name: Install dependencies (web/)
         working-directory: web
         run: |
-          # Run npm in the web directory. Prefer `npm ci` when a lockfile is present
+          echo "Working directory contents:"
+          pwd
           if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
             npm ci
           else
