@@ -1,0 +1,157 @@
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.balances (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  student_profile_id uuid NOT NULL,
+  amount_due numeric NOT NULL CHECK (amount_due >= 0::numeric),
+  due_date date NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT balances_pkey PRIMARY KEY (id),
+  CONSTRAINT balances_student_profile_id_fkey FOREIGN KEY (student_profile_id) REFERENCES public.student_profile(id)
+);
+CREATE TABLE public.courses (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL UNIQUE,
+  title text NOT NULL,
+  years integer NOT NULL CHECK (years > 0),
+  description text,
+  department text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT courses_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.enlisted_subjects (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  enlistment_id uuid NOT NULL,
+  subject_id uuid NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT enlisted_subjects_pkey PRIMARY KEY (id),
+  CONSTRAINT enlisted_subjects_enlistment_id_fkey FOREIGN KEY (enlistment_id) REFERENCES public.enlistments(id),
+  CONSTRAINT enlisted_subjects_subject_id_fkey FOREIGN KEY (subject_id) REFERENCES public.subjects(id)
+);
+CREATE TABLE public.enlistments (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  enrollment_id uuid NOT NULL,
+  student_id uuid NOT NULL,
+  course_id uuid NOT NULL,
+  status USER-DEFINED NOT NULL DEFAULT 'pending'::enlistment_status,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT enlistments_pkey PRIMARY KEY (id),
+  CONSTRAINT enlistments_enrollment_id_fkey FOREIGN KEY (enrollment_id) REFERENCES public.enrollments(id),
+  CONSTRAINT enlistments_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.student_profile(id),
+  CONSTRAINT enlistments_course_id_fkey FOREIGN KEY (course_id) REFERENCES public.courses(id)
+);
+CREATE TABLE public.enrollments (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  student_profile_id uuid NOT NULL,
+  course_id uuid NOT NULL,
+  year_level text NOT NULL,
+  semester text NOT NULL,
+  school_year text NOT NULL,
+  status USER-DEFINED NOT NULL DEFAULT 'pending'::enrollment_status,
+  section text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT enrollments_pkey PRIMARY KEY (id),
+  CONSTRAINT enrollments_student_profile_id_fkey FOREIGN KEY (student_profile_id) REFERENCES public.student_profile(id),
+  CONSTRAINT enrollments_course_id_fkey FOREIGN KEY (course_id) REFERENCES public.courses(id)
+);
+CREATE TABLE public.payments (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  student_profile_id uuid NOT NULL,
+  balance_id uuid NOT NULL,
+  payment_method USER-DEFINED NOT NULL,
+  reference_number text NOT NULL UNIQUE,
+  payment_date date NOT NULL DEFAULT CURRENT_DATE CHECK (payment_date <= CURRENT_DATE),
+  amount_paid numeric NOT NULL CHECK (amount_paid > 0::numeric),
+  reason text,
+  description text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT payments_pkey PRIMARY KEY (id),
+  CONSTRAINT payments_student_profile_id_fkey FOREIGN KEY (student_profile_id) REFERENCES public.student_profile(id),
+  CONSTRAINT payments_balance_id_fkey FOREIGN KEY (balance_id) REFERENCES public.balances(id)
+);
+CREATE TABLE public.student_profile (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL UNIQUE,
+  course_id uuid NOT NULL,
+  status USER-DEFINED NOT NULL DEFAULT 'enrolled'::student_status,
+  enrollment_date date NOT NULL DEFAULT CURRENT_DATE,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT student_profile_pkey PRIMARY KEY (id),
+  CONSTRAINT student_profile_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT student_profile_course_id_fkey FOREIGN KEY (course_id) REFERENCES public.courses(id)
+);
+CREATE TABLE public.subjects (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  course_id uuid NOT NULL,
+  subject_code text NOT NULL,
+  subject_name text NOT NULL,
+  units integer NOT NULL CHECK (units > 0),
+  description text,
+  semester integer CHECK (semester >= 1 AND semester <= 3),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT subjects_pkey PRIMARY KEY (id),
+  CONSTRAINT subjects_course_id_fkey FOREIGN KEY (course_id) REFERENCES public.courses(id)
+);
+CREATE TABLE public.users (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  auth_user_id uuid UNIQUE,
+  first_name text,
+  middle_name text,
+  last_name text,
+  email text NOT NULL UNIQUE,
+  student_number text UNIQUE CHECK (student_number ~ '^[A-Z0-9]-[A-Z0-9]{2}-[A-Z0-9]{3}$'::text),
+  gender USER-DEFINED,
+  birthday date,
+  citizenship text,
+  civil_status USER-DEFINED,
+  religion text,
+  landline_number text,
+  mobile_number text,
+  country text,
+  street_address text,
+  address_type USER-DEFINED DEFAULT 'no selection'::address_type,
+  father_last_name text,
+  father_first_name text,
+  father_middle_name text,
+  father_residential_address text,
+  father_citizenship text,
+  father_religion text,
+  father_email text,
+  father_mobile_number text,
+  father_landline_number text,
+  mother_last_name text,
+  mother_first_name text,
+  mother_middle_name text,
+  mother_residential_address text,
+  mother_citizenship text,
+  mother_religion boolean DEFAULT false,
+  mother_email text,
+  mother_mobile_number text,
+  mother_landline_number text,
+  guardian_last_name text,
+  guardian_first_name text,
+  guardian_middle_name text,
+  guardian_residential_address text,
+  guardian_citizenship text,
+  guardian_roman_catholic boolean DEFAULT false,
+  guardian_email text,
+  guardian_mobile_number text,
+  guardian_landline_number text,
+  guardian_relationship text,
+  emergency_contact_name text,
+  emergency_contact_mobile_number text,
+  role USER-DEFINED NOT NULL DEFAULT 'user'::user_role,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT users_pkey PRIMARY KEY (id),
+  CONSTRAINT users_auth_user_id_fkey FOREIGN KEY (auth_user_id) REFERENCES auth.users(id)
+);

@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "develop"]
+  pull_request:
+    branches: ["main", "develop"]
+  workflow_dispatch: {}
+
+jobs:
+  web-build:
+    name: Build web frontend
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+    strategy:
+      matrix:
+        node-version: [18.x]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
+
+      - name: Cache web/node_modules and npm
+        uses: actions/cache@v4
+        with:
+          path: |
+            web/node_modules
+            ~/.npm
+          key: ${{ runner.os }}-web-${{ matrix.node-version }}-${{ hashFiles('web/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-web-${{ matrix.node-version }}-
+
+      - name: Install dependencies (web/)
+        working-directory: web
+        run: npm ci
+
+      - name: Lint (web/)
+        working-directory: web
+        run: npm run lint
+
+      - name: Build (web/)
+        working-directory: web
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: npm run build
+
+      - name: Upload build artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-build
+          path: web/dist
