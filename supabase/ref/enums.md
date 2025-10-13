@@ -1,0 +1,21 @@
+| schema_name | type_name               | labels                                                                                                                          | display_type                 |
+| ----------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| auth        | aal_level               | {aal1,aal2,aal3}                                                                                                                | auth.aal_level               |
+| auth        | code_challenge_method   | {s256,plain}                                                                                                                    | auth.code_challenge_method   |
+| auth        | factor_status           | {unverified,verified}                                                                                                           | auth.factor_status           |
+| auth        | factor_type             | {totp,webauthn,phone}                                                                                                           | auth.factor_type             |
+| auth        | oauth_registration_type | {dynamic,manual}                                                                                                                | auth.oauth_registration_type |
+| auth        | one_time_token_type     | {confirmation_token,reauthentication_token,recovery_token,email_change_token_new,email_change_token_current,phone_change_token} | auth.one_time_token_type     |
+| public      | address_type            | {home,permanent,birthplace,city,"no selection"}                                                                                 | address_type                 |
+| public      | balance_status          | {pending,paid,overdue,cancelled,partial}                                                                                        | balance_status               |
+| public      | civil_status            | {single,married,divorced,widowed,separated}                                                                                     | civil_status                 |
+| public      | enlistment_status       | {pending,approved,denied}                                                                                                       | enlistment_status            |
+| public      | enrollment_status       | {pending,enrolled,dropped,completed,failed,withdrawn}                                                                           | enrollment_status            |
+| public      | gender                  | {male,female,other}                                                                                                             | gender                       |
+| public      | payment_method          | {cash,credit_card,debit_card,bank_transfer,online,check,scholarship}                                                            | payment_method               |
+| public      | payment_status          | {pending,completed,failed,refunded}                                                                                             | payment_status               |
+| public      | student_status          | {enrolled,active,inactive,on_leave,graduated,dropped,transferred}                                                               | student_status               |
+| public      | user_role               | {user,accounting,registrar,admin,superadmin,student}                                                                            | user_role                    |
+| realtime    | action                  | {INSERT,UPDATE,DELETE,TRUNCATE,ERROR}                                                                                           | realtime.action              |
+| realtime    | equality_op             | {eq,neq,lt,lte,gt,gte,in}                                                                                                       | realtime.equality_op         |
+| storage     | buckettype              | {STANDARD,ANALYTICS}                                                                                                            | storage.buckettype           |

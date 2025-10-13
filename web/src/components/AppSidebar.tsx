@@ -41,12 +41,13 @@ const navigationItems = [
         url: "/dashboard/student",
         icon: faUserGraduate,
       },
+      { title: "Reports", url: "/reports", icon: faChartBar },
+      { title: "Students", url: "/students", icon: faUsers },
     ],
   },
   {
     title: "Academic Management",
     items: [
-      { title: "Students", url: "/students", icon: faUsers },
       { title: "Courses", url: "/courses", icon: faGraduationCap },
       { title: "Subjects", url: "/subjects", icon: faBookOpen },
       { title: "Enrollments", url: "/enrollments", icon: faUserGraduate },
@@ -60,7 +61,6 @@ const navigationItems = [
       { title: "Balances", url: "/balances", icon: faMoneyBill },
       { title: "My Payments", url: "/my/payments", icon: faCreditCard },
       { title: "My Balances", url: "/my/balances", icon: faMoneyBill },
-      { title: "Reports", url: "/reports", icon: faChartBar },
     ],
   },
   {
@@ -112,7 +112,9 @@ export function AppSidebar() {
     if (isAdmin) {
       return items.filter((i) => {
         const u = (i && i.url) || "";
-        return !u.startsWith("/my");
+        // Admins: block student personal routes (/my/*) and the student dashboard
+        // so admins don't see student-specific pages like /dashboard/student
+        return !u.startsWith("/my") && u !== "/dashboard/student";
       });
     }
 
@@ -142,17 +144,14 @@ export function AppSidebar() {
       }
 
       // Accounting: show shared dashboard and accounting features only
+      // NOTE: Reports are admin-only now, so do not include '/reports' here.
       if (role === "accounting") {
         if (url === "/dashboard") return true;
-        if (
-          url.startsWith("/payments") ||
-          url.startsWith("/balances") ||
-          url.startsWith("/reports")
-        )
+        if (url.startsWith("/payments") || url.startsWith("/balances"))
           return true;
         // allow viewing student list for accounting when needed
         if (url === "/students") return true;
-        // block student personal and student dashboard routes
+        // block student personal and student dashboard routes and other sections
         return false;
       }
 

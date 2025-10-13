@@ -221,6 +221,22 @@ const Courses = () => {
                   >
                     Prev
                   </Button>
+
+                  <select
+                    value={currentPage}
+                    onChange={(e) => setCurrentPage(Number(e.target.value))}
+                    className="border rounded-md px-3 py-1 text-sm"
+                    title="Jump to page"
+                  >
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                      (n) => (
+                        <option key={n} value={n}>
+                          {n}
+                        </option>
+                      )
+                    )}
+                  </select>
+
                   <Button
                     variant="outline"
                     onClick={() =>
