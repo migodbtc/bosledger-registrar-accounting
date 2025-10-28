@@ -9,9 +9,11 @@ import {
   faMoneyBill,
   faClock,
   faExclamationTriangle,
+  faEdit,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/utils/supabaseClient";
+import RowModal from "@/components/RowModal";
 
 type Balance = {
   id: string;
@@ -143,6 +145,14 @@ const MyBalances: React.FC = () => {
   const handlePay = (balanceId: string) => {
     console.log("Initiate payment for", balanceId);
     // placeholder: navigate to payment flow or open modal
+  };
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedRow, setSelectedRow] = useState<any | null>(null);
+
+  const openModalFor = (row: any) => {
+    setSelectedRow(row);
+    setModalOpen(true);
   };
 
   return (
@@ -299,6 +309,15 @@ const MyBalances: React.FC = () => {
                         {isPaid ? "Paid" : "Pay Now"}
                       </Button>
 
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openModalFor(balance)}
+                      >
+                        <FontAwesomeIcon icon={faEdit} className="mr-2" />
+                        Edit
+                      </Button>
+
                       {!isPaid && (
                         <Button
                           variant="outline"
@@ -326,6 +345,15 @@ const MyBalances: React.FC = () => {
             )}
           </CardContent>
         </Card>
+
+        <RowModal
+          open={modalOpen}
+          onOpenChange={(v) => setModalOpen(v)}
+          entity="balances"
+          row={selectedRow}
+          onSaved={() => console.log("balance saved")}
+          onDeleted={() => console.log("balance deleted")}
+        />
       </div>
     </DashboardLayout>
   );

@@ -26,7 +26,10 @@ import {
   faSortDown,
   faEye,
 } from "@fortawesome/free-solid-svg-icons";
+import { faEdit } from "@fortawesome/free-solid-svg-icons";
 import { Badge } from "@/components/ui/badge";
+import RowModal from "@/components/RowModal";
+import CreateModal from "@/components/CreateModal";
 
 const MyPayments = () => {
   const { userProfile } = useAuth();
@@ -120,6 +123,15 @@ const MyPayments = () => {
     return dates.reduce((a, b) => (a > b ? a : b));
   }, [payments]);
 
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedRow, setSelectedRow] = useState<any | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+
+  const openModalFor = (row: any) => {
+    setSelectedRow(row);
+    setModalOpen(true);
+  };
+
   return (
     <DashboardLayout
       title="My Payments"
@@ -141,7 +153,10 @@ const MyPayments = () => {
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <Button className="hypatia-gradient-bg">
+            <Button
+              className="hypatia-gradient-bg"
+              onClick={() => setCreateOpen(true)}
+            >
               <FontAwesomeIcon icon={faPlus} className="mr-2" />
               Make Payment
             </Button>
@@ -393,9 +408,8 @@ const MyPayments = () => {
                             <div className="flex items-center space-x-2">
                               <Button
                                 variant="ghost"
-                                onClick={() =>
-                                  console.log("View payment", p.id)
-                                }
+                                onClick={() => openModalFor(p)}
+                                aria-label={`View payment ${p.id}`}
                               >
                                 <FontAwesomeIcon icon={faEye} />
                               </Button>
@@ -467,6 +481,21 @@ const MyPayments = () => {
           </CardContent>
         </Card>
       </div>
+      <RowModal
+        open={modalOpen}
+        onOpenChange={(v) => setModalOpen(v)}
+        entity="payments"
+        row={selectedRow}
+        onSaved={() => console.log("payment saved")}
+        onDeleted={() => console.log("payment deleted")}
+        readOnly={true}
+      />
+      <CreateModal
+        open={createOpen}
+        onOpenChange={(v) => setCreateOpen(v)}
+        entity="payments"
+        onCreated={() => setPage(1)}
+      />
     </DashboardLayout>
   );
 };

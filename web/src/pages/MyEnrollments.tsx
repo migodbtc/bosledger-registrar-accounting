@@ -31,6 +31,8 @@ import {
   faCheck,
 } from "@fortawesome/free-solid-svg-icons";
 import { Badge } from "@/components/ui/badge";
+import RowModal from "@/components/RowModal";
+import CreateModal from "@/components/CreateModal";
 
 const MyEnrollments = () => {
   const { userProfile } = useAuth();
@@ -118,6 +120,15 @@ const MyEnrollments = () => {
   // delete action removed — table is read-only in this view
 
   const [completedCount, setCompletedCount] = useState<number | null>(null);
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedRow, setSelectedRow] = useState<any | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+
+  const openModalFor = (row: any) => {
+    setSelectedRow(row);
+    setModalOpen(true);
+  };
 
   const [totalUnits, setTotalUnits] = useState<number | null>(null);
   const [pendingCount, setPendingCount] = useState<number | null>(null);
@@ -242,7 +253,10 @@ const MyEnrollments = () => {
               <option value={25}>25 rows</option>
               <option value={50}>50 rows</option>
             </select>
-            <Button className="hypatia-gradient-bg">
+            <Button
+              className="hypatia-gradient-bg"
+              onClick={() => setCreateOpen(true)}
+            >
               <FontAwesomeIcon icon={faUserPlus} className="mr-2" />
               Enroll
             </Button>
@@ -516,7 +530,8 @@ const MyEnrollments = () => {
                         <div className="flex items-center space-x-2">
                           <Button
                             variant="ghost"
-                            onClick={() => console.log("View", e.id)}
+                            onClick={() => openModalFor(e)}
+                            aria-label={`View enrollment ${e.id}`}
                           >
                             <FontAwesomeIcon icon={faEye} />
                           </Button>
@@ -567,6 +582,24 @@ const MyEnrollments = () => {
           </Card>
         )}
       </div>
+      <RowModal
+        open={modalOpen}
+        onOpenChange={(v) => setModalOpen(v)}
+        entity="enrollments"
+        row={selectedRow}
+        onSaved={() => console.log("enrollment saved")}
+        onDeleted={() => console.log("enrollment deleted")}
+        readOnly={true}
+      />
+      <CreateModal
+        open={createOpen}
+        onOpenChange={(v) => setCreateOpen(v)}
+        entity="enrollments"
+        onCreated={() => {
+          // simple refresh: go to first page and rely on effect to fetch
+          setPage(1);
+        }}
+      />
     </DashboardLayout>
   );
 };

@@ -10,7 +10,6 @@ import {
   faUserGraduate,
   faCreditCard,
   faMoneyBill,
-  faChartBar,
   faUser,
   faChevronRight,
   faSignOut,
@@ -41,7 +40,6 @@ const navigationItems = [
         url: "/dashboard/student",
         icon: faUserGraduate,
       },
-      { title: "Reports", url: "/reports", icon: faChartBar },
       { title: "Students", url: "/students", icon: faUsers },
     ],
   },
@@ -61,6 +59,15 @@ const navigationItems = [
       { title: "Balances", url: "/balances", icon: faMoneyBill },
       { title: "My Payments", url: "/my/payments", icon: faCreditCard },
       { title: "My Balances", url: "/my/balances", icon: faMoneyBill },
+    ],
+  },
+  {
+    title: "System Management",
+
+    items: [
+      { title: "Admin Manager", url: "/admins", icon: faUser },
+      { title: "Role Manager", url: "/roles", icon: faUser },
+      { title: "E2E Runner", url: "/e2e-runner", icon: faUser },
     ],
   },
   {
@@ -110,11 +117,26 @@ export function AppSidebar() {
     const isAdmin = role === "admin" || role === "superadmin";
     // Admins: full functional access except student personal routes (/my/*)
     if (isAdmin) {
+      // For admin vs superadmin we need slightly different rules for the
+      // "System Management" section. Admin (role === 'admin') should only
+      // see the Role Manager (/roles). Superadmin keeps full access (but we
+      // still hide student personal routes and student dashboard).
       return items.filter((i) => {
         const u = (i && i.url) || "";
-        // Admins: block student personal routes (/my/*) and the student dashboard
-        // so admins don't see student-specific pages like /dashboard/student
-        return !u.startsWith("/my") && u !== "/dashboard/student";
+        // Always block student personal routes and the student dashboard
+        if (u.startsWith("/my") || u === "/dashboard/student") return false;
+
+        if (role === "admin") {
+          // Admin: only allow role manager under system management
+          // We'll allow other non-system-management items as before.
+          // If this item is part of system management (admins, roles, e2e-runner),
+          // only allow /roles.
+          if (u === "/admins" || u === "/e2e-runner") return false;
+          return true;
+        }
+
+        // superadmin: allow everything (except student personal routes/student dashboard handled above)
+        return true;
       });
     }
 
@@ -140,6 +162,9 @@ export function AppSidebar() {
           return false; // block accounting
         // explicitly block student-dashboard route
         if (url === "/dashboard/student") return false;
+        // Registrar should NOT see system management routes (admins/roles/e2e-runner)
+        if (url === "/admins" || url === "/roles" || url === "/e2e-runner")
+          return false;
         return true;
       }
 

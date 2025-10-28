@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 // sorting removed: no sort icons imported
+import RowModal from "@/components/RowModal";
 
 type SortField =
   | "payment_date"
@@ -302,6 +303,14 @@ const Payments = () => {
 
   const sorted = useMemo(() => payments ?? [], [payments]);
 
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedRow, setSelectedRow] = useState<any | null>(null);
+
+  const openModalFor = (row: any) => {
+    setSelectedRow(row);
+    setModalOpen(true);
+  };
+
   const displayed = useMemo(() => {
     if (!searchTerm || searchTerm.trim() === "") return sorted;
     const q = searchTerm.trim().toLowerCase();
@@ -495,7 +504,7 @@ const Payments = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex justify-start space-x-2">
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" onClick={() => openModalFor(p)} aria-label={`Edit payment ${p.id}`}>
                             <FontAwesomeIcon
                               icon={faEdit}
                               className="w-4 h-4"
@@ -514,6 +523,15 @@ const Payments = () => {
                 </TableBody>
               </Table>
             </div>
+
+            <RowModal
+              open={modalOpen}
+              onOpenChange={(v) => setModalOpen(v)}
+              entity="payments"
+              row={selectedRow}
+              onSaved={() => setCurrentPage((p) => p)}
+              onDeleted={() => setCurrentPage(1)}
+            />
 
             {totalPages > 1 && (
               <div className="flex items-center justify-between mt-4">

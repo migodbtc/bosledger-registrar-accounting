@@ -28,6 +28,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { supabase } from "@/utils/supabaseClient";
+import RowModal from "@/components/RowModal";
+import CreateModal from "@/components/CreateModal";
 
 const Enrollments = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -36,6 +38,7 @@ const Enrollments = () => {
   const [loading, setLoading] = useState(false);
   const [enrollments, setEnrollments] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -101,6 +104,14 @@ const Enrollments = () => {
     fetchEnrollments();
   }, [currentPage, pageSize, searchTerm]);
 
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedRow, setSelectedRow] = useState<any | null>(null);
+
+  const openModalFor = (row: any) => {
+    setSelectedRow(row);
+    setModalOpen(true);
+  };
+
   return (
     <DashboardLayout
       title="Enrollment Management"
@@ -121,7 +132,10 @@ const Enrollments = () => {
               </p>
             </div>
           </div>
-          <Button className="hypatia-gradient-bg">
+          <Button
+            className="hypatia-gradient-bg"
+            onClick={() => setCreateOpen(true)}
+          >
             <FontAwesomeIcon icon={faPlus} className="mr-2" />
             New Enrollment
           </Button>
@@ -218,7 +232,12 @@ const Enrollments = () => {
                         <TableCell>{getStatusBadge(enr.status)}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end space-x-2">
-                            <Button variant="ghost" size="sm">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openModalFor(enr)}
+                              aria-label={`Edit enrollment ${enr.id}`}
+                            >
                               <FontAwesomeIcon
                                 icon={faEdit}
                                 className="w-4 h-4"
@@ -295,6 +314,24 @@ const Enrollments = () => {
             )}
           </CardContent>
         </Card>
+        <RowModal
+          open={modalOpen}
+          onOpenChange={(v) => setModalOpen(v)}
+          entity="enrollments"
+          row={selectedRow}
+          onSaved={() => {
+            setCurrentPage((p) => p);
+          }}
+          onDeleted={() => {
+            setCurrentPage(1);
+          }}
+        />
+        <CreateModal
+          open={createOpen}
+          onOpenChange={(v) => setCreateOpen(v)}
+          entity="enrollments"
+          onCreated={() => setCurrentPage(1)}
+        />
       </div>
     </DashboardLayout>
   );

@@ -20,6 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import CreateModal from "@/components/CreateModal";
 // pagination will use simple buttons (First / Prev / Next / Last) similar to MyEnrollments
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -50,6 +51,7 @@ const Students = () => {
   );
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
+  const [createOpen, setCreateOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [sortField, setSortField] = useState<SortField>("student_id");
@@ -58,6 +60,7 @@ const Students = () => {
   const [students, setStudents] = useState<any[]>([]);
   const [enrollments, setEnrollments] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
+  const [refreshToken, setRefreshToken] = useState(0);
 
   // Map enrollments by student_profile_id for quick lookup when rendering rows
   const enrollmentsByProfile = useMemo(() => {
@@ -257,6 +260,7 @@ const Students = () => {
     sortDirection,
     statusFilter,
     searchTerm,
+    refreshToken,
   ]);
   // fetch enrollments for the currently loaded student_profile rows
   // (Handled inside the main fetchStudents effect so enrollments correspond to the displayed page)
@@ -355,7 +359,10 @@ const Students = () => {
               </p>
             </div>
           </div>
-          <Button className="hypatia-gradient-bg" onClick={handleAddStudent}>
+          <Button
+            className="hypatia-gradient-bg"
+            onClick={() => setCreateOpen(true)}
+          >
             <FontAwesomeIcon icon={faPlus} className="mr-2" />
             Register Student
           </Button>
@@ -639,6 +646,12 @@ const Students = () => {
             )}
           </CardContent>
         </Card>
+        <CreateModal
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          entity="students"
+          onCreated={() => setRefreshToken((t) => t + 1)}
+        />
       </div>
     </DashboardLayout>
   );

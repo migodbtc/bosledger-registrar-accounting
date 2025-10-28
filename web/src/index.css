@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -21,7 +21,7 @@
     --primary: 213 85% 19%; /* Deep blue #0a2259 */
     --primary-foreground: 0 0% 100%;
     --primary-light: 189 100% 82%; /* Light cyan #a1f4ff */
-    
+
     --secondary: 220 14% 96%;
     --secondary-foreground: 220 13% 18%;
 
@@ -47,9 +47,17 @@
     --radius: 1rem; /* 2xl rounded corners as requested */
 
     /* Gradients */
-    --hypatia-gradient: linear-gradient(45deg, hsl(213 85% 19%) 0%, hsl(189 100% 82%) 100%);
-    --hypatia-gradient-subtle: linear-gradient(135deg, hsl(213 85% 19% / 0.1) 0%, hsl(189 100% 82% / 0.1) 100%);
-    
+    --hypatia-gradient: linear-gradient(
+      45deg,
+      hsl(213 85% 19%) 0%,
+      hsl(189 100% 82%) 100%
+    );
+    --hypatia-gradient-subtle: linear-gradient(
+      135deg,
+      hsl(213 85% 19% / 0.1) 0%,
+      hsl(189 100% 82% / 0.1) 100%
+    );
+
     /* Shadows */
     --shadow-soft: 0 2px 8px hsl(220 13% 18% / 0.06);
     --shadow-medium: 0 4px 16px hsl(220 13% 18% / 0.1);
@@ -101,7 +109,7 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: "Inter", system-ui, sans-serif;
   }
 
   /* Custom gradient utilities */

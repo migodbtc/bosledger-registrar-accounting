@@ -4,8 +4,9 @@ const path = require("path");
 
 const repoDir = path.resolve(__dirname, "..");
 const moduleArg = process.argv[2] || "module_3";
-const runner = `src/tests/${moduleArg}/index.ts`;
-const logsDir = path.join(repoDir, "src", "tests", moduleArg, "logs");
+// tests are under src/tests/e2e/<module>/index.ts
+const runner = `src/tests/e2e/${moduleArg}/index.ts`;
+const logsDir = path.join(repoDir, "src", "tests", "e2e", moduleArg, "logs");
 if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
 
 const timestamp = new Date().toISOString().replace(/[:.]/g, "-");

@@ -28,6 +28,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { supabase } from "@/utils/supabaseClient";
+import RowModal from "@/components/RowModal";
+import CreateModal from "@/components/CreateModal";
 
 const Subjects = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -70,6 +72,15 @@ const Subjects = () => {
     fetchSubjects();
   }, [currentPage, pageSize, searchTerm]);
 
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedRow, setSelectedRow] = useState<any | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+
+  const openModalFor = (row: any) => {
+    setSelectedRow(row);
+    setModalOpen(true);
+  };
+
   return (
     <DashboardLayout
       title="Subject Management"
@@ -90,7 +101,10 @@ const Subjects = () => {
               </p>
             </div>
           </div>
-          <Button className="hypatia-gradient-bg">
+          <Button
+            className="hypatia-gradient-bg"
+            onClick={() => setCreateOpen(true)}
+          >
             <FontAwesomeIcon icon={faPlus} className="mr-2" />
             Register Subject
           </Button>
@@ -181,7 +195,12 @@ const Subjects = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end space-x-2">
-                            <Button variant="ghost" size="sm">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openModalFor(subj)}
+                              aria-label={`Edit subject ${subj.id}`}
+                            >
                               <FontAwesomeIcon
                                 icon={faEdit}
                                 className="w-4 h-4"
@@ -258,6 +277,24 @@ const Subjects = () => {
             )}
           </CardContent>
         </Card>
+        <RowModal
+          open={modalOpen}
+          onOpenChange={(v) => setModalOpen(v)}
+          entity="subjects"
+          row={selectedRow}
+          onSaved={() => {
+            setCurrentPage((p) => p);
+          }}
+          onDeleted={() => {
+            setCurrentPage(1);
+          }}
+        />
+        <CreateModal
+          open={createOpen}
+          onOpenChange={(v) => setCreateOpen(v)}
+          entity="subjects"
+          onCreated={() => setCurrentPage(1)}
+        />
       </div>
     </DashboardLayout>
   );

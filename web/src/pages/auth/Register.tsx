@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -39,8 +39,20 @@ const Register = () => {
     role: "" as UserRole,
   });
   const navigate = useNavigate();
-  const { signUp } = useAuth();
+  const { signUp, userProfile, user, loading } = useAuth();
   const [submitting, setSubmitting] = useState(false);
+
+  // Redirect already-authenticated users away from auth routes
+  useEffect(() => {
+    if (!loading && user) {
+      const role = userProfile?.role ?? null;
+      if (role === "student") {
+        navigate("/dashboard/student", { replace: true });
+      } else {
+        navigate("/dashboard", { replace: true });
+      }
+    }
+  }, [user, userProfile, loading, navigate]);
 
   const roleIcons = {
     student: faUserGraduate,

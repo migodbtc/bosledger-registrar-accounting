@@ -28,6 +28,8 @@ import {
   faSearch,
 } from "@fortawesome/free-solid-svg-icons";
 import { supabase } from "@/utils/supabaseClient";
+import RowModal from "@/components/RowModal";
+import CreateModal from "@/components/CreateModal";
 
 const Courses = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -69,6 +71,18 @@ const Courses = () => {
     fetchCourses();
   }, [currentPage, pageSize, searchTerm]);
 
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedRow, setSelectedRow] = useState<any | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+
+  const openModalFor = (row: any) => {
+    setSelectedRow(row);
+    setModalOpen(true);
+  };
+
+  // expose fetchCourses to be callable after save/delete by triggering a page refresh
+  // we'll just reload the current page of data by toggling currentPage (cheap) if needed
+
   return (
     <DashboardLayout
       title="Course Management"
@@ -88,7 +102,10 @@ const Courses = () => {
               </p>
             </div>
           </div>
-          <Button className="hypatia-gradient-bg">
+          <Button
+            className="hypatia-gradient-bg"
+            onClick={() => setCreateOpen(true)}
+          >
             <FontAwesomeIcon icon={faPlus} className="mr-2" />
             Register Course
           </Button>
@@ -181,7 +198,12 @@ const Courses = () => {
                         <TableCell>{course.department ?? "-"}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end space-x-2">
-                            <Button variant="ghost" size="sm">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openModalFor(course)}
+                              aria-label={`Edit course ${course.id}`}
+                            >
                               <FontAwesomeIcon
                                 icon={faEdit}
                                 className="w-4 h-4"
@@ -258,6 +280,26 @@ const Courses = () => {
             )}
           </CardContent>
         </Card>
+        <RowModal
+          open={modalOpen}
+          onOpenChange={(v) => setModalOpen(v)}
+          entity="courses"
+          row={selectedRow}
+          onSaved={() => {
+            /* refresh page by reloading current page */ setCurrentPage(
+              (p) => p
+            );
+          }}
+          onDeleted={() => {
+            setCurrentPage(1);
+          }}
+        />
+        <CreateModal
+          open={createOpen}
+          onOpenChange={(v) => setCreateOpen(v)}
+          entity="courses"
+          onCreated={() => setCurrentPage(1)}
+        />
       </div>
     </DashboardLayout>
   );

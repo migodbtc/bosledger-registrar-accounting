@@ -1,0 +1,911 @@
+{
+  "generatedAt": "2025-10-14T06:30:17.994Z",
+  "modules": [
+    {
+      "id": "module_1",
+      "title": "module 1",
+      "tests": []
+    },
+    {
+      "id": "module_2",
+      "title": "module 2",
+      "tests": [
+        {
+          "id": "mod2-T1",
+          "title": "mod2-T1 — View landing page and scroll to bottom",
+          "file": "module_2/mod2-T1.md",
+          "route": "//localhost",
+          "inputs": [],
+          "scope": [
+            "Open the app root URL (e.g. `http://localhost:8080`).",
+            "Confirm landing content loads and page can be scrolled to the bottom."
+          ],
+          "preconditions": [
+            "The web app is running locally or accessible at a test URL."
+          ],
+          "steps": [
+            "Start the web app (Vite dev or built server) at known URL.",
+            "Navigate to `/` (root).",
+            "Wait for main landmark elements to appear (header, hero, footer or a known `#root` element).",
+            "Programmatically scroll the page to the bottom.",
+            "Assert that the footer or bottom section is visible and contains expected text or links."
+          ],
+          "acceptanceCriteria": [
+            "Page loads without JS errors.",
+            "Header/hero and footer (or bottom element) are rendered.",
+            "Scrolling completes and bottom element is visible and not hidden by loading overlays."
+          ],
+          "notes": [
+            "This test is intentionally simple and fast. Use it as a smoke test in CI to detect broken builds or missing assets."
+          ],
+          "criteria": [
+            {
+              "name": "navigation",
+              "label": "Navigation clarity",
+              "description": "Was navigation clear and discoverable?",
+              "default": 3
+            },
+            {
+              "name": "understandability",
+              "label": "Understandability",
+              "description": "Could a new user understand the flow quickly?",
+              "default": 3
+            },
+            {
+              "name": "difficulty",
+              "label": "Difficulty",
+              "description": "How difficult was the task?",
+              "default": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "module_3",
+      "title": "module 3",
+      "tests": [
+        {
+          "id": "mod3-T1",
+          "title": "mod3-T1 — View auth pages (login & register)",
+          "file": "module_3/mod3-T1.md",
+          "route": "/login",
+          "inputs": [],
+          "scope": [
+            "Verify the public auth pages render required inputs and controls."
+          ],
+          "preconditions": [
+            "App is reachable at test URL."
+          ],
+          "steps": [
+            "Navigate to `/login`.",
+            "Assert presence of email and password inputs and a submit button.",
+            "Navigate to `/register`.",
+            "Assert presence of required fields and submit control."
+          ],
+          "acceptanceCriteria": [
+            "Login and register pages render required inputs and buttons."
+          ],
+          "notes": [
+            "Adjust selectors to match actual DOM (input name/id/class)."
+          ],
+          "criteria": [
+            {
+              "name": "navigation",
+              "label": "Navigation clarity",
+              "description": "Was navigation clear and discoverable?",
+              "default": 3
+            },
+            {
+              "name": "understandability",
+              "label": "Understandability",
+              "description": "Could a new user understand the flow quickly?",
+              "default": 3
+            },
+            {
+              "name": "difficulty",
+              "label": "Difficulty",
+              "description": "How difficult was the task?",
+              "default": 3
+            }
+          ]
+        },
+        {
+          "id": "mod3-T2",
+          "title": "mod3-T2 — Verify & register new account",
+          "file": "module_3/mod3-T2.md",
+          "route": "/register",
+          "inputs": [],
+          "scope": [
+            "Register a new user account via the app's registration flow."
+          ],
+          "preconditions": [
+            "Tests should target a disposable test DB or use unique emails per run."
+          ],
+          "steps": [
+            "On `/register`, fill the form with a new unique email (e.g. `e2e+{ts}@example.test`) and a valid password.",
+            "Submit the form.",
+            "Wait for success notification or redirect to post-register page.",
+            "Optionally verify user exists via Supabase API."
+          ],
+          "acceptanceCriteria": [
+            "Registration completes and the app presents the success state or redirects appropriately."
+          ],
+          "notes": [
+            "Clean up created users via API where possible."
+          ],
+          "criteria": [
+            {
+              "name": "navigation",
+              "label": "Navigation clarity",
+              "description": "Was navigation clear and discoverable?",
+              "default": 3
+            },
+            {
+              "name": "understandability",
+              "label": "Understandability",
+              "description": "Could a new user understand the flow quickly?",
+              "default": 3
+            },
+            {
+              "name": "difficulty",
+              "label": "Difficulty",
+              "description": "How difficult was the task?",
+              "default": 3
+            }
+          ]
+        },
+        {
+          "id": "mod3-T3",
+          "title": "mod3-T3 — Login with new account",
+          "file": "module_3/mod3-T3.md",
+          "route": "/login",
+          "inputs": [],
+          "scope": [
+            "Sign in with newly created credentials and verify access to protected content."
+          ],
+          "preconditions": [
+            "A user created by mod3-T2 exists."
+          ],
+          "steps": [
+            "On `/login`, enter the newly created credentials and submit.",
+            "Wait for navigation to protected landing (`/dashboard` or similar) and assert known element (user avatar, welcome text) is present."
+          ],
+          "acceptanceCriteria": [
+            "Login succeeds and protected content is accessible."
+          ],
+          "notes": [
+            "Use API sessions or token-based sign-in to speed up tests where appropriate."
+          ],
+          "criteria": [
+            {
+              "name": "navigation",
+              "label": "Navigation clarity",
+              "description": "Was navigation clear and discoverable?",
+              "default": 3
+            },
+            {
+              "name": "understandability",
+              "label": "Understandability",
+              "description": "Could a new user understand the flow quickly?",
+              "default": 3
+            },
+            {
+              "name": "difficulty",
+              "label": "Difficulty",
+              "description": "How difficult was the task?",
+              "default": 3
+            }
+          ]
+        },
+        {
+          "id": "mod3-T4",
+          "title": "mod3-T4 — Sign out account",
+          "file": "module_3/mod3-T4.md",
+          "route": "/session",
+          "inputs": [],
+          "scope": [
+            "Verify the sign-out flow for an authenticated user."
+          ],
+          "preconditions": [
+            "User is logged in (e.g., from mod3-T3 or via fixture/session setup)."
+          ],
+          "steps": [
+            "Trigger the sign-out action (via UI button/menu).",
+            "Assert the app navigates to `/` or `/login` and protected content is not accessible."
+          ],
+          "acceptanceCriteria": [
+            "User is redirected to public area and cannot access protected routes without logging in again."
+          ],
+          "notes": [
+            "Also assert that session tokens/cookies are cleared if applicable."
+          ],
+          "criteria": [
+            {
+              "name": "navigation",
+              "label": "Navigation clarity",
+              "description": "Was navigation clear and discoverable?",
+              "default": 3
+            },
+            {
+              "name": "understandability",
+              "label": "Understandability",
+              "description": "Could a new user understand the flow quickly?",
+              "default": 3
+            },
+            {
+              "name": "difficulty",
+              "label": "Difficulty",
+              "description": "How difficult was the task?",
+              "default": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "module_4",
+      "title": "module 4",
+      "tests": [
+        {
+          "id": "mod4-T1",
+          "title": "mod4-T1 — Login as student then view dashboard",
+          "file": "module_4/mod4-T1.md",
+          "route": "/dashboard/student",
+          "inputs": [],
+          "scope": [
+            "Authenticate as a student and verify the student dashboard renders."
+          ],
+          "preconditions": [
+            "A test student account exists."
+          ],
+          "steps": [
+            "Login with student credentials.",
+            "Navigate to `/dashboard/student`.",
+            "Assert dashboard widgets (e.g., 'My Enrollments' card) are visible."
+          ],
+          "acceptanceCriteria": [
+            "Dashboard loads and expected widgets are present."
+          ],
+          "notes": [],
+          "criteria": [
+            {
+              "name": "navigation",
+              "label": "Navigation clarity",
+              "description": "Was navigation clear and discoverable?",
+              "default": 3
+            },
+            {
+              "name": "understandability",
+              "label": "Understandability",
+              "description": "Could a new user understand the flow quickly?",
+              "default": 3
+            },
+            {
+              "name": "difficulty",
+              "label": "Difficulty",
+              "description": "How difficult was the task?",
+              "default": 3
+            }
+          ]
+        },
+        {
+          "id": "mod4-T2",
+          "title": "mod4-T2 — Login as student then view profile",
+          "file": "module_4/mod4-T2.md",
+          "route": "/profile",
+          "inputs": [],
+          "scope": [
+            "Verify that the student's profile page renders and shows expected fields."
+          ],
+          "preconditions": [
+            "Student account exists and is logged in."
+          ],
+          "steps": [
+            "Login with student credentials.",
+            "Navigate to `/profile`.",
+            "Assert name/email and editable fields are present."
+          ],
+          "acceptanceCriteria": [
+            "Profile renders and shows expected user data."
+          ],
+          "notes": [],
+          "criteria": [
+            {
+              "name": "navigation",
+              "label": "Navigation clarity",
+              "description": "Was navigation clear and discoverable?",
+              "default": 3
+            },
+            {
+              "name": "understandability",
+              "label": "Understandability",
+              "description": "Could a new user understand the flow quickly?",
+              "default": 3
+            },
+            {
+              "name": "difficulty",
+              "label": "Difficulty",
+              "description": "How difficult was the task?",
+              "default": 3
+            }
+          ]
+        },
+        {
+          "id": "mod4-T3",
+          "title": "mod4-T3 — Login as student then view personal enrollments",
+          "file": "module_4/mod4-T3.md",
+          "route": "/my/enrollments",
+          "inputs": [],
+          "scope": [
+            "Verify the student's personal enrollments page."
+          ],
+          "preconditions": [
+            "Student account with enrollments or known empty state."
+          ],
+          "steps": [
+            "Login as student.",
+            "Navigate to `/my/enrollments`.",
+            "Assert enrollments table or empty state is displayed."
+          ],
+          "acceptanceCriteria": [
+            "Enrollments list or empty-state message is present and correct."
+          ],
+          "notes": [],
+          "criteria": [
+            {
+              "name": "navigation",
+              "label": "Navigation clarity",
+              "description": "Was navigation clear and discoverable?",
+              "default": 3
+            },
+            {
+              "name": "understandability",
+              "label": "Understandability",
+              "description": "Could a new user understand the flow quickly?",
+              "default": 3
+            },
+            {
+              "name": "difficulty",
+              "label": "Difficulty",
+              "description": "How difficult was the task?",
+              "default": 3
+            }
+          ]
+        },
+        {
+          "id": "mod4-T4",
+          "title": "mod4-T4 — Login as student then view personal payments",
+          "file": "module_4/mod4-T4.md",
+          "route": "/my/payments",
+          "inputs": [],
+          "scope": [
+            "Verify the student's payment history page."
+          ],
+          "preconditions": [
+            "Student account exists."
+          ],
+          "steps": [
+            "Login as student.",
+            "Navigate to `/my/payments`.",
+            "Assert payments list or empty state is present."
+          ],
+          "acceptanceCriteria": [
+            "Payments page renders and shows records or valid empty state."
+          ],
+          "notes": [],
+          "criteria": [
+            {
+              "name": "navigation",
+              "label": "Navigation clarity",
+              "description": "Was navigation clear and discoverable?",
+              "default": 3
+            },
+            {
+              "name": "understandability",
+              "label": "Understandability",
+              "description": "Could a new user understand the flow quickly?",
+              "default": 3
+            },
+            {
+              "name": "difficulty",
+              "label": "Difficulty",
+              "description": "How difficult was the task?",
+              "default": 3
+            }
+          ]
+        },
+        {
+          "id": "mod4-T5",
+          "title": "mod4-T5 — Login as student then view personal balance",
+          "file": "module_4/mod4-T5.md",
+          "route": "/summary",
+          "inputs": [],
+          "scope": [
+            "Verify the student's balance page/summary."
+          ],
+          "preconditions": [
+            "Student account exists."
+          ],
+          "steps": [
+            "Login as student.",
+            "Navigate to `/my/balances`.",
+            "Assert balance summary and numeric fields render."
+          ],
+          "acceptanceCriteria": [
+            "Balance summary is present and numeric fields displayed properly."
+          ],
+          "notes": [],
+          "criteria": [
+            {
+              "name": "navigation",
+              "label": "Navigation clarity",
+              "description": "Was navigation clear and discoverable?",
+              "default": 3
+            },
+            {
+              "name": "understandability",
+              "label": "Understandability",
+              "description": "Could a new user understand the flow quickly?",
+              "default": 3
+            },
+            {
+              "name": "difficulty",
+              "label": "Difficulty",
+              "description": "How difficult was the task?",
+              "default": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "module_5",
+      "title": "module 5",
+      "tests": [
+        {
+          "id": "mod5-T1",
+          "title": "mod5-T1 — Login as registrar then view staff dashboard",
+          "file": "module_5/mod5-T1.md",
+          "route": "/dashboard",
+          "inputs": [],
+          "scope": [
+            "Authenticate as registrar and verify staff dashboard renders."
+          ],
+          "preconditions": [
+            "Registrar account exists."
+          ],
+          "steps": [
+            "Login using registrar credentials.",
+            "Navigate to `/dashboard`.",
+            "Assert key widgets (counts, action buttons) are present."
+          ],
+          "acceptanceCriteria": [
+            "Dashboard loads with expected registrar widgets."
+          ],
+          "notes": [],
+          "criteria": [
+            {
+              "name": "navigation",
+              "label": "Navigation clarity",
+              "description": "Was navigation clear and discoverable?",
+              "default": 3
+            },
+            {
+              "name": "understandability",
+              "label": "Understandability",
+              "description": "Could a new user understand the flow quickly?",
+              "default": 3
+            },
+            {
+              "name": "difficulty",
+              "label": "Difficulty",
+              "description": "How difficult was the task?",
+              "default": 3
+            }
+          ]
+        },
+        {
+          "id": "mod5-T2",
+          "title": "mod5-T2 — Login as registrar then view students table",
+          "file": "module_5/mod5-T2.md",
+          "route": "/table",
+          "inputs": [],
+          "scope": [
+            "Verify students list/table for registrar role."
+          ],
+          "preconditions": [
+            "Registrar account exists; students seeded or empty-state known."
+          ],
+          "steps": [
+            "Login as registrar.",
+            "Navigate to `/students`.",
+            "Assert table headers and at least one row or valid empty state."
+          ],
+          "acceptanceCriteria": [
+            "Students table or empty-state present."
+          ],
+          "notes": [],
+          "criteria": [
+            {
+              "name": "navigation",
+              "label": "Navigation clarity",
+              "description": "Was navigation clear and discoverable?",
+              "default": 3
+            },
+            {
+              "name": "understandability",
+              "label": "Understandability",
+              "description": "Could a new user understand the flow quickly?",
+              "default": 3
+            },
+            {
+              "name": "difficulty",
+              "label": "Difficulty",
+              "description": "How difficult was the task?",
+              "default": 3
+            }
+          ]
+        },
+        {
+          "id": "mod5-T3",
+          "title": "mod5-T3 — Login as registrar then view courses page",
+          "file": "module_5/mod5-T3.md",
+          "route": "/table",
+          "inputs": [],
+          "scope": [
+            "Verify courses list/table for registrar."
+          ],
+          "preconditions": [
+            "Registrar account exists."
+          ],
+          "steps": [
+            "Login as registrar.",
+            "Navigate to `/courses`.",
+            "Assert courses list/table renders."
+          ],
+          "acceptanceCriteria": [
+            "Courses page renders and lists data or shows a valid empty state."
+          ],
+          "notes": [],
+          "criteria": [
+            {
+              "name": "navigation",
+              "label": "Navigation clarity",
+              "description": "Was navigation clear and discoverable?",
+              "default": 3
+            },
+            {
+              "name": "understandability",
+              "label": "Understandability",
+              "description": "Could a new user understand the flow quickly?",
+              "default": 3
+            },
+            {
+              "name": "difficulty",
+              "label": "Difficulty",
+              "description": "How difficult was the task?",
+              "default": 3
+            }
+          ]
+        },
+        {
+          "id": "mod5-T4",
+          "title": "mod5-T4 — Login as registrar then view subjects page",
+          "file": "module_5/mod5-T4.md",
+          "route": "/table",
+          "inputs": [],
+          "scope": [
+            "Verify subjects list/table for registrar."
+          ],
+          "preconditions": [
+            "Registrar account exists."
+          ],
+          "steps": [
+            "Login as registrar.",
+            "Navigate to `/subjects`.",
+            "Assert subjects list/table renders."
+          ],
+          "acceptanceCriteria": [
+            "Subjects page renders or shows a correct empty state."
+          ],
+          "notes": [],
+          "criteria": [
+            {
+              "name": "navigation",
+              "label": "Navigation clarity",
+              "description": "Was navigation clear and discoverable?",
+              "default": 3
+            },
+            {
+              "name": "understandability",
+              "label": "Understandability",
+              "description": "Could a new user understand the flow quickly?",
+              "default": 3
+            },
+            {
+              "name": "difficulty",
+              "label": "Difficulty",
+              "description": "How difficult was the task?",
+              "default": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "module_6",
+      "title": "module 6",
+      "tests": [
+        {
+          "id": "mod6-T1",
+          "title": "mod6-T1 — Login as accounting then view staff dashboard",
+          "file": "module_6/mod6-T1.md",
+          "route": "/dashboard",
+          "inputs": [],
+          "scope": [
+            "Authenticate as accounting role and verify staff dashboard renders."
+          ],
+          "preconditions": [
+            "Accounting account exists."
+          ],
+          "steps": [
+            "Login using accounting credentials.",
+            "Navigate to `/dashboard`.",
+            "Assert accounting widgets are visible."
+          ],
+          "acceptanceCriteria": [
+            "Dashboard loads with expected accounting widgets."
+          ],
+          "notes": [],
+          "criteria": [
+            {
+              "name": "navigation",
+              "label": "Navigation clarity",
+              "description": "Was navigation clear and discoverable?",
+              "default": 3
+            },
+            {
+              "name": "understandability",
+              "label": "Understandability",
+              "description": "Could a new user understand the flow quickly?",
+              "default": 3
+            },
+            {
+              "name": "difficulty",
+              "label": "Difficulty",
+              "description": "How difficult was the task?",
+              "default": 3
+            }
+          ]
+        },
+        {
+          "id": "mod6-T2",
+          "title": "mod6-T2 — Login as accounting then view students table",
+          "file": "module_6/mod6-T2.md",
+          "route": "/table",
+          "inputs": [],
+          "scope": [
+            "Verify students list/table for accounting role."
+          ],
+          "preconditions": [
+            "Accounting account exists."
+          ],
+          "steps": [
+            "Login as accounting.",
+            "Navigate to `/students`.",
+            "Assert students table loads."
+          ],
+          "acceptanceCriteria": [
+            "Students table or empty-state present."
+          ],
+          "notes": [],
+          "criteria": [
+            {
+              "name": "navigation",
+              "label": "Navigation clarity",
+              "description": "Was navigation clear and discoverable?",
+              "default": 3
+            },
+            {
+              "name": "understandability",
+              "label": "Understandability",
+              "description": "Could a new user understand the flow quickly?",
+              "default": 3
+            },
+            {
+              "name": "difficulty",
+              "label": "Difficulty",
+              "description": "How difficult was the task?",
+              "default": 3
+            }
+          ]
+        },
+        {
+          "id": "mod6-T3",
+          "title": "mod6-T3 — Login as accounting then view payments",
+          "file": "module_6/mod6-T3.md",
+          "route": "/payments",
+          "inputs": [],
+          "scope": [
+            "Verify the accounting role can access the payments page and view payment records or a valid empty state."
+          ],
+          "preconditions": [
+            "An accounting test user exists and can sign in."
+          ],
+          "steps": [
+            "Sign in as the accounting test user.",
+            "Navigate to `/payments` (via sidebar or direct URL).",
+            "Assert that the payments list/table renders, including headers for date, amount, and payer.",
+            "If no payments exist, assert a clear empty-state message is shown."
+          ],
+          "acceptanceCriteria": [
+            "Payments page renders and shows either a list/table with rows or a valid empty state."
+          ],
+          "notes": [
+            "Use table header assertions rather than row counts to keep the test stable."
+          ],
+          "criteria": [
+            {
+              "name": "navigation",
+              "label": "Navigation clarity",
+              "description": "Was navigation clear and discoverable?",
+              "default": 3
+            },
+            {
+              "name": "understandability",
+              "label": "Understandability",
+              "description": "Could a new user understand the flow quickly?",
+              "default": 3
+            },
+            {
+              "name": "difficulty",
+              "label": "Difficulty",
+              "description": "How difficult was the task?",
+              "default": 3
+            }
+          ]
+        },
+        {
+          "id": "mod6-T4",
+          "title": "mod6-T4 — Login as accounting then view balances",
+          "file": "module_6/mod6-T4.md",
+          "route": "/summary",
+          "inputs": [],
+          "scope": [
+            "Verify the accounting role can access the balances/summary page and see account balances and filters."
+          ],
+          "preconditions": [
+            "An accounting test user exists and can sign in."
+          ],
+          "steps": [
+            "Sign in as the accounting test user.",
+            "Navigate to `/balances` (via sidebar or direct URL).",
+            "Assert that the balances summary and numeric fields render, and filters (date range, student selector) are available if applicable."
+          ],
+          "acceptanceCriteria": [
+            "Balances page shows summary information and relevant controls; numeric fields display properly."
+          ],
+          "notes": [
+            "If the page uses async loading, wait for summary elements rather than fixed timeouts."
+          ],
+          "criteria": [
+            {
+              "name": "navigation",
+              "label": "Navigation clarity",
+              "description": "Was navigation clear and discoverable?",
+              "default": 3
+            },
+            {
+              "name": "understandability",
+              "label": "Understandability",
+              "description": "Could a new user understand the flow quickly?",
+              "default": 3
+            },
+            {
+              "name": "difficulty",
+              "label": "Difficulty",
+              "description": "How difficult was the task?",
+              "default": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "module_7",
+      "title": "module 7",
+      "tests": [
+        {
+          "id": "mod7-T1",
+          "title": "mod7-T1 — Login as admin then view staff dashboard",
+          "file": "module_7/mod7-T1.md",
+          "route": "/dashboard",
+          "inputs": [],
+          "scope": [
+            "Authenticate as admin and verify staff dashboard renders and admin widgets are present."
+          ],
+          "preconditions": [
+            "Admin account exists."
+          ],
+          "steps": [
+            "Login using admin credentials.",
+            "Navigate to `/dashboard`.",
+            "Assert admin widgets are visible."
+          ],
+          "acceptanceCriteria": [
+            "Admin dashboard renders and shows expected components."
+          ],
+          "notes": [],
+          "criteria": [
+            {
+              "name": "navigation",
+              "label": "Navigation clarity",
+              "description": "Was navigation clear and discoverable?",
+              "default": 3
+            },
+            {
+              "name": "understandability",
+              "label": "Understandability",
+              "description": "Could a new user understand the flow quickly?",
+              "default": 3
+            },
+            {
+              "name": "difficulty",
+              "label": "Difficulty",
+              "description": "How difficult was the task?",
+              "default": 3
+            }
+          ]
+        },
+        {
+          "id": "mod7-T2",
+          "title": "mod7-T2 — Login as admin then view registrar pages",
+          "file": "module_7/mod7-T2.md",
+          "route": "/students",
+          "inputs": [],
+          "scope": [
+            "Verify admin has access to registrar pages (`/students`, `/courses`)."
+          ],
+          "preconditions": [
+            "Admin account exists."
+          ],
+          "steps": [
+            "Login as admin.",
+            "Navigate to `/students` and `/courses`.",
+            "Assert pages render and expected UI elements are present."
+          ],
+          "acceptanceCriteria": [
+            "Admin can access registrar pages without permission errors."
+          ],
+          "notes": [],
+          "criteria": [
+            {
+              "name": "navigation",
+              "label": "Navigation clarity",
+              "description": "Was navigation clear and discoverable?",
+              "default": 3
+            },
+            {
+              "name": "understandability",
+              "label": "Understandability",
+              "description": "Could a new user understand the flow quickly?",
+              "default": 3
+            },
+            {
+              "name": "difficulty",
+              "label": "Difficulty",
+              "description": "How difficult was the task?",
+              "default": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "module_8",
+      "title": "module 8",
+      "tests": []
+    }
+  ]
+}

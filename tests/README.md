@@ -1,161 +1,73 @@
-# Tests README — web (Vitest) + supabase (TS harness)
+# Welcome to your Lovable project
 
-This repository has two separate test areas:
+## Project info
 
-- Web frontend tests: web/src/tests — Vitest + @testing-library/react unit/component tests.
-- Supabase harness tests: supabase/src/tests — Node/TypeScript test harness that runs supabase integration checks.
+**URL**: https://lovable.dev/projects/0f51b472-5712-4eb5-914c-f08d16916520
 
-This README explains what you need, where utilities/loggers live, and the exact commands (Windows cmd) to run each module's tests and inspect logs.
+## How can I edit this code?
 
-## Quick layout
+There are several ways of editing your application.
 
-- web/
+**Use Lovable**
 
-  - src/tests/
-    - setupTests.ts (vitest setup: jest-dom, IntersectionObserver mock)
-    - test-utils.tsx (renderWithProviders: QueryClient + BrowserRouter)
-    - module_2/log/ (test logs produced by module_2 tests)
-    - module_2/unit/index.test.tsx
-    - module_2/unit/test-logger.ts
-    - module_3/unit/ (auth tests + logger)
-      - register.test.tsx
-      - login.test.tsx
-      - test-logger.ts
+Simply visit the [Lovable Project](https://lovable.dev/projects/0f51b472-5712-4eb5-914c-f08d16916520) and start prompting.
 
-- supabase/
-  - src/tests/
-    - module_2/ (reference supabase SQL tests + logs/)
-    - module_3/ (supabase auth tests + logs/)
-    - scripts/run_module_and_log.js (runner used by npm scripts)
+Changes made via Lovable will be committed automatically to this repo.
 
-## What each test stack uses
+**Use your preferred IDE**
 
-Web (frontend) tests
+If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
 
-- Vitest (v3) — fast test runner integrated with Vite.
-- @testing-library/react — DOM testing helpers and queries.
-- @testing-library/jest-dom — convenient matchers (setup in `setupTests.ts`).
-- jsdom — test DOM environment (required). If missing, Vitest may attempt to auto-install a package manager; install with npm to avoid bun auto-detection.
-- framer-motion is used by UI; `setupTests.ts` includes a small IntersectionObserver mock so InView/viewport features won't crash in jsdom.
+The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
-Files of interest (web):
+Follow these steps:
 
-- `web/src/tests/test-utils.tsx` — renderWithProviders(ui) wraps components with QueryClientProvider and BrowserRouter. Use this in all component/unit tests.
-- `web/src/tests/setupTests.ts` — imports `@testing-library/jest-dom` and provides global mocks (IntersectionObserver) so components mount reliably.
-- `web/src/tests/module_<n>/unit/test-logger.ts` — per-module logger that writes JSON-lines to `.../log/` and finalizes a result file with naming pattern:
-  `module_<n>-<iso-timestamp>-<runId>-<status>.log` where status is `success` or `error`.
+```sh
+# Step 1: Clone the repository using the project's Git URL.
+git clone <YOUR_GIT_URL>
 
-Supabase tests (server-side harness)
+# Step 2: Navigate to the project directory.
+cd <YOUR_PROJECT_NAME>
 
-- Implemented in `supabase/` and run by node/ts-node. They exercise DB schema, auth flows and other integration points. These follow the project's `supabase` test conventions.
-- `supabase/package.json` scripts typically include `module2:log`, `module3:log`, etc. These call `node scripts/run_module_and_log.js <module>` which runs tests and writes logs into `supabase/src/tests/module_<n>/logs/`.
+# Step 3: Install the necessary dependencies.
+npm i
 
-## Log format (common convention used)
-
-- Each log file is a JSON-lines file (one JSON object per line):
-  1. Header line: { module, startedAt, runId, env }
-  2. Event lines: { type: "event", outcome: "success"|"error", test: string, message?, error?, time }
-  3. Summary line: { success: number, errors: number, durationMs }
-- Final filename pattern (web tests created by our logger):
-  `module_<n>-<ISO-timestamp>-<runId>-<status>.log`
-
-## Where logs live
-
-- Web unit logs: `web/src/tests/module_<n>/log/`
-- Supabase harness logs: `supabase/src/tests/module_<n>/logs/`
-
-## Commands — run tests (Windows cmd)
-
-1. Web (frontend) — from the `web` folder
-
-Install dependencies (once):
-
-```cmd
-cd web
-npm install
+# Step 4: Start the development server with auto-reloading and an instant preview.
+npm run dev
 ```
 
-If Vitest complains about missing jsdom, install it explicitly to avoid the auto-installer trying 'bun':
+**Edit a file directly in GitHub**
 
-```cmd
-npm install -D jsdom
-```
+- Navigate to the desired file(s).
+- Click the "Edit" button (pencil icon) at the top right of the file view.
+- Make your changes and commit the changes.
 
-Run all Vitest tests:
+**Use GitHub Codespaces**
 
-```cmd
-npm run test
-```
+- Navigate to the main page of your repository.
+- Click on the "Code" button (green button) near the top right.
+- Select the "Codespaces" tab.
+- Click on "New codespace" to launch a new Codespace environment.
+- Edit files directly within the Codespace and commit and push your changes once you're done.
 
-Run tests for a specific module (we added per-module scripts):
+## What technologies are used for this project?
 
-```cmd
-npm run test:module2
-npm run test:module3
-```
+This project is built with:
 
-Or run a single test file directly with Vitest:
+- Vite
+- TypeScript
+- React
+- shadcn-ui
+- Tailwind CSS
 
-```cmd
-npm run test -- src\tests\module_3\unit\login.test.tsx
-```
+## How can I deploy this project?
 
-2. Supabase harness — from the `supabase` folder
+Simply open [Lovable](https://lovable.dev/projects/0f51b472-5712-4eb5-914c-f08d16916520) and click on Share -> Publish.
 
-Install dependencies (once):
+## Can I connect a custom domain to my Lovable project?
 
-```cmd
-cd supabase
-npm install
-```
+Yes, you can!
 
-Run a module harness (script will run tests and write logs):
+To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
-```cmd
-npm run module2:log
-npm run module3:log
-```
-
-These scripts invoke `node scripts/run_module_and_log.js <module>` which runs tests and writes logs into `supabase/src/tests/module_<n>/logs/`.
-
-## Viewing logs (Windows cmd)
-
-- Use `type` to print the JSON-lines log:
-
-```cmd
-type web\src\tests\module_2\log\<filename>.log
-```
-
-Or open the file in a code editor to inspect events and summary.
-
-## Best practices & notes
-
-- Tests should import the shared render helper: `import { renderWithProviders } from '@/tests/test-utils'` or use the relative path in tests under `src/tests/...` depending on resolution. We used relative imports in some tests to avoid alias issues in Vitest transforms.
-- Mock the single Supabase client exported at `web/src/utils/supabaseClient.ts` in unit tests when you need to simulate backend responses. Example (Vitest):
-
-```ts
-vi.mock('@/utils/supabaseClient', () => ({ supabase: { from: () => ({ select: () => ... }) } }))
-```
-
-- The web tests include a small IntersectionObserver mock in `setupTests.ts` so framer-motion's viewport/InView code won't crash in jsdom.
-- Each module test logger writes a temporary running file and renames it to the final filename on finalize (success/error). Tests call `finalizeRun()` in an `afterAll()` hook.
-
-## Troubleshooting
-
-- If Vitest attempts to auto-install dependencies and reports `bun` not found, install missing packages with npm (see jsdom) or add a `packageManager` field in `web/package.json` to prefer npm:
-
-```json
-"packageManager": "npm@9"
-```
-
-- If import alias `@/` doesn't resolve in tests, add the same alias to `vitest.config.ts` (already present) or use a relative import like `../../../pages/Index` in test files.
-
-## Adding new module tests
-
-1. Create `web/src/tests/module_X/unit/*.test.tsx` and use `renderWithProviders`.
-2. Add a per-module logger `web/src/tests/module_X/unit/test-logger.ts` modeled after existing ones (header, events, finalizeRun).
-3. Add a `test:moduleX` npm script in `web/package.json` (optional) that runs `vitest run src/tests/module_X/unit`.
-
-## Wrap-up
-
-This README is intended to live at `tests/README.md` as a single entry point explaining both test systems. If you want, I can also add a `scripts/run_all_tests.cmd` that runs `npm run test:module2` etc and copies all logs into a single `tests/logs/` folder for easier CI artifact publishing.
+Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)

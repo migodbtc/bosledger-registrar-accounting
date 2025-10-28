@@ -20,12 +20,14 @@ import Enrollments from "./pages/Enrollments";
 import MyEnrollments from "./pages/MyEnrollments";
 import Payments from "./pages/Payments";
 import Balances from "./pages/Balances";
-import Reports from "./pages/Reports";
 import Profile from "./pages/Profile";
+import RoleManager from "./pages/RoleManager";
+import AdminManager from "./pages/AdminManager";
 import NotFound from "./pages/NotFound";
 import RoleSwitcherOverlay from "@/components/RoleSwitcherOverlay";
 import MyPayments from "./pages/MyPayments";
 import MyBalances from "./pages/MyBalances";
+import E2ETestRunner from "./pages/E2ETestRunner";
 
 const queryClient = new QueryClient();
 
@@ -174,18 +176,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/reports"
-              element={
-                <ProtectedRoute>
-                  <SidebarProvider>
-                    <div className="min-h-screen flex w-full">
-                      <Reports />
-                    </div>
-                  </SidebarProvider>
-                </ProtectedRoute>
-              }
-            />
+            {/* Reports page removed */}
             <Route
               path="/profile"
               element={
@@ -198,9 +189,37 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/roles"
+              element={
+                <ProtectedRoute>
+                  <SidebarProvider>
+                    <div className="min-h-screen flex w-full">
+                      <RoleManager />
+                    </div>
+                  </SidebarProvider>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admins"
+              element={
+                <ProtectedRoute>
+                  <SidebarProvider>
+                    <div className="min-h-screen flex w-full">
+                      <AdminManager />
+                    </div>
+                  </SidebarProvider>
+                </ProtectedRoute>
+              }
+            />
 
             {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
+            {import.meta.env.DEV && (
+              <Route path="/e2e-runner" element={<E2ETestRunner />} />
+            )}
           </Routes>
         </BrowserRouter>
         {import.meta.env.DEV && <RoleSwitcherOverlay />}
