@@ -10,10 +10,13 @@ import {
   faClock,
   faExclamationTriangle,
   faEdit,
+  faEye,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/utils/supabaseClient";
 import RowModal from "@/components/RowModal";
+import { useNavigate } from "react-router-dom";
+import { toast } from "@/components/ui/use-toast";
 
 type Balance = {
   id: string;
@@ -154,6 +157,8 @@ const MyBalances: React.FC = () => {
     setSelectedRow(row);
     setModalOpen(true);
   };
+
+  const navigate = useNavigate();
 
   return (
     <DashboardLayout title="My Balances" subtitle="Your outstanding balances">
@@ -314,18 +319,18 @@ const MyBalances: React.FC = () => {
                         size="sm"
                         onClick={() => openModalFor(balance)}
                       >
-                        <FontAwesomeIcon icon={faEdit} className="mr-2" />
-                        Edit
+                        <FontAwesomeIcon icon={faEye} className="mr-2" />
+                        View Full Details
                       </Button>
 
                       {!isPaid && (
                         <Button
                           variant="outline"
                           onClick={() =>
-                            console.log(
-                              "Remind / contact billing for",
-                              balance.id
-                            )
+                            toast({
+                              title: "Not implemented",
+                              description: "Feature is not yet implemented!",
+                            })
                           }
                         >
                           Send Reminder
@@ -334,7 +339,7 @@ const MyBalances: React.FC = () => {
 
                       <Button
                         variant="outline"
-                        onClick={() => console.log("View payments")}
+                        onClick={() => navigate("/my/payments")}
                       >
                         View Payments
                       </Button>
@@ -353,6 +358,7 @@ const MyBalances: React.FC = () => {
           row={selectedRow}
           onSaved={() => console.log("balance saved")}
           onDeleted={() => console.log("balance deleted")}
+          readOnly={true}
         />
       </div>
     </DashboardLayout>

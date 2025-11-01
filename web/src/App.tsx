@@ -21,6 +21,7 @@ import MyEnrollments from "./pages/MyEnrollments";
 import Payments from "./pages/Payments";
 import Balances from "./pages/Balances";
 import Profile from "./pages/Profile";
+import AwaitingVerification from "./pages/AwaitingVerification";
 import RoleManager from "./pages/RoleManager";
 import AdminManager from "./pages/AdminManager";
 import NotFound from "./pages/NotFound";
@@ -184,6 +185,19 @@ const App = () => (
                   <SidebarProvider>
                     <div className="min-h-screen flex w-full">
                       <Profile />
+                    </div>
+                  </SidebarProvider>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/verification"
+              element={
+                <ProtectedRoute>
+                  <SidebarProvider>
+                    <div className="min-h-screen flex w-full">
+                      <AwaitingVerification />
                     </div>
                   </SidebarProvider>
                 </ProtectedRoute>

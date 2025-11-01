@@ -1,0 +1,25 @@
+{
+  "id": "result-1761642133375",
+  "testCase": {
+    "id": "mod2-test1",
+    "module": "Mod 2: Basic Website Structure",
+    "title": "Navigate landing page with no errors",
+    "prerequisites": [],
+    "steps": [
+      "Navigate the landing page via scrolling the page"
+    ],
+    "successCriteria": "The landing page is navigable, with no misrendered components or errors, and is interactable."
+  },
+  "testerName": "Carmelo John Cruz",
+  "testDate": "2025-10-28T09:02:13.375Z",
+  "moduleType": "Mod 2: Basic Website Structure",
+  "grading": {
+    "functionalAccuracy": 3,
+    "systemStability": 3,
+    "uiuxConsistency": 5,
+    "securityAccess": 5,
+    "performanceResponsiveness": 5
+  },
+  "notes": "Wire the data or use the existing data showing in the landing page to be accurate. Use modals or the link the pages for the popular courses section, latest news and updates to display the actual reviews and blogs.",
+  "status": "passed"
+}

@@ -1,0 +1,27 @@
+{
+  "id": "result-1761643285793",
+  "testCase": {
+    "id": "mod3-test4",
+    "module": "Mod 3: Authentication",
+    "title": "Perform login operation with valid credentials",
+    "prerequisites": [
+      "Existing valid account"
+    ],
+    "steps": [
+      "Input correct email and password in the login form and submit"
+    ],
+    "successCriteria": "Successful login, user is redirected to dashboard or landing page, and session/auth token is properly generated."
+  },
+  "testerName": "Carmelo John Cruz",
+  "testDate": "2025-10-28T09:21:25.793Z",
+  "moduleType": "Mod 3: Authentication",
+  "grading": {
+    "functionalAccuracy": 4,
+    "systemStability": 5,
+    "uiuxConsistency": 4,
+    "securityAccess": 5,
+    "performanceResponsiveness": 5
+  },
+  "notes": "When registering the same email again but with a different password, it results in invalid credentials for some reason.",
+  "status": "passed"
+}

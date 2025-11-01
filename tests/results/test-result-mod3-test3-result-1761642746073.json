@@ -1,0 +1,25 @@
+{
+  "id": "result-1761642746073",
+  "testCase": {
+    "id": "mod3-test3",
+    "module": "Mod 3: Authentication",
+    "title": "Perform register operation with invalid credentials",
+    "prerequisites": [],
+    "steps": [
+      "Attempt to register using invalid inputs (e.g., existing email, weak password, or blank fields)"
+    ],
+    "successCriteria": "Registration fails gracefully; validation errors are shown; no crashes or unexpected behavior occur."
+  },
+  "testerName": "Carmelo John Cruz",
+  "testDate": "2025-10-28T09:12:26.073Z",
+  "moduleType": "Mod 3: Authentication",
+  "grading": {
+    "functionalAccuracy": 4,
+    "systemStability": 3,
+    "uiuxConsistency": 5,
+    "securityAccess": 3,
+    "performanceResponsiveness": 4
+  },
+  "notes": "Add a note that states the user to use a minimum number of characters when creating passwords. Also fix the issue of the registered email being duplicated. Basically it accepts the same email multiple times without any notice that the email already exists or any validation for that.",
+  "status": "partial"
+}

@@ -1,0 +1,25 @@
+{
+  "id": "result-1761643397814",
+  "testCase": {
+    "id": "mod3-test5",
+    "module": "Mod 3: Authentication",
+    "title": "Perform login operation with invalid credentials",
+    "prerequisites": [],
+    "steps": [
+      "Attempt to log in using wrong email/password combinations or unregistered account"
+    ],
+    "successCriteria": "Login fails gracefully; user receives a proper error message; no redirection to authenticated areas; no errors or crashes occur."
+  },
+  "testerName": "Carmelo John Cruz",
+  "testDate": "2025-10-28T09:23:17.814Z",
+  "moduleType": "Mod 3: Authentication",
+  "grading": {
+    "functionalAccuracy": 5,
+    "systemStability": 4,
+    "uiuxConsistency": 5,
+    "securityAccess": 4,
+    "performanceResponsiveness": 5
+  },
+  "notes": "Nothing to note as it is straightforwardly working. Only thing to fix is the issue with the same email getting accepted multiple times.",
+  "status": "passed"
+}

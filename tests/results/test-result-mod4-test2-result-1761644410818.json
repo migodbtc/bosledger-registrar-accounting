@@ -1,0 +1,28 @@
+{
+  "id": "result-1761644410818",
+  "testCase": {
+    "id": "mod4-test2",
+    "module": "Mod 4: Student Operations",
+    "title": "Perform quick action navigation on student dashboard",
+    "prerequisites": [
+      "Logged-in student account",
+      "Student dashboard loaded"
+    ],
+    "steps": [
+      "From the student dashboard, click all quick action buttons"
+    ],
+    "successCriteria": "Each quick action button successfully redirects to its associated page with correct content and no errors."
+  },
+  "testerName": "Carmelo John Cruz",
+  "testDate": "2025-10-28T09:40:10.818Z",
+  "moduleType": "Mod 4: Student Operations",
+  "grading": {
+    "functionalAccuracy": 5,
+    "systemStability": 5,
+    "uiuxConsistency": 5,
+    "securityAccess": 5,
+    "performanceResponsiveness": 5
+  },
+  "notes": "Works as intended. Very straightforward",
+  "status": "passed"
+}

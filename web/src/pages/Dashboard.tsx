@@ -270,6 +270,19 @@ const Dashboard = () => {
   const role: string | null = userProfile?.role ?? null;
   const navigate = useNavigate();
 
+  // If the logged-in user has the initial 'user' role (not yet verified),
+  // redirect them to the Awaiting Verification page to avoid showing admin/dashboard content.
+  // This prevents users from directly accessing the admin dashboard URL.
+  useEffect(() => {
+    try {
+      if (role === "user") {
+        navigate("/verification", { replace: true });
+      }
+    } catch (e) {
+      // ignore navigation errors
+    }
+  }, [role, navigate]);
+
   const formatRelative = (iso?: string | null) => {
     if (!iso) return "";
     const t = new Date(iso).getTime();

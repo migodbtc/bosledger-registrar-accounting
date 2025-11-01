@@ -1,0 +1,25 @@
+{
+  "id": "result-1761642485268",
+  "testCase": {
+    "id": "mod3-test2",
+    "module": "Mod 3: Authentication",
+    "title": "Perform register operation with valid credentials",
+    "prerequisites": [],
+    "steps": [
+      "Register a new account using valid and complete input fields (e.g., unique email, strong password)"
+    ],
+    "successCriteria": "Account is successfully created, user is redirected or shown a success message, and no backend or frontend errors appear."
+  },
+  "testerName": "Carmelo John Cruz",
+  "testDate": "2025-10-28T09:08:05.268Z",
+  "moduleType": "Mod 3: Authentication",
+  "grading": {
+    "functionalAccuracy": 5,
+    "systemStability": 4,
+    "uiuxConsistency": 4,
+    "securityAccess": 5,
+    "performanceResponsiveness": 5
+  },
+  "notes": "Like I said add a data privacy notice or terms and conditions checkbox during registering to let users know how their data is being used.",
+  "status": "passed"
+}

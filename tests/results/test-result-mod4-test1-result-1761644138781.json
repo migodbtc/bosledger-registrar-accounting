@@ -1,0 +1,27 @@
+{
+  "id": "result-1761644138781",
+  "testCase": {
+    "id": "mod4-test1",
+    "module": "Mod 4: Student Operations",
+    "title": "Navigate the student-side pages with no errors",
+    "prerequisites": [
+      "Logged-in student account"
+    ],
+    "steps": [
+      "Navigate through all primary student-side routes (Dashboard, My Enrollments, My Payments, My Balances)"
+    ],
+    "successCriteria": "All pages load successfully with no UI misrendering, console errors, or broken routes; all components are interactable."
+  },
+  "testerName": "Carmelo John Cruz",
+  "testDate": "2025-10-28T09:35:38.781Z",
+  "moduleType": "Mod 4: Student Operations",
+  "grading": {
+    "functionalAccuracy": 3,
+    "systemStability": 3,
+    "uiuxConsistency": 4,
+    "securityAccess": 3,
+    "performanceResponsiveness": 4
+  },
+  "notes": "Fix the roles regarding whether you are a student or a user by default as after registering it seems by default the user gets the \"user\" role. This results the user getting access to other components outside the student role which should have been only for the admins.",
+  "status": "partial"
+}

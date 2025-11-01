@@ -54,6 +54,12 @@ const CreateModal: React.FC<CreateModalProps> = ({
       : userProfile.student_profile;
   }, [userProfile]);
 
+  // current academic year range for non-admin students (immutable)
+  const academicYearRange = useMemo(() => {
+    const y = new Date().getFullYear();
+    return `${y}-${y + 1}`;
+  }, []);
+
   // stepper: 1 = details, 2 = review
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
@@ -104,6 +110,12 @@ const CreateModal: React.FC<CreateModalProps> = ({
   const [studentEmail, setStudentEmail] = useState<string>("");
 
   useEffect(() => {
+    // If the signed-in user has a student profile, make it the default and
+    // treat the student as immutable in the creation modal (no dropdown).
+    if (sp && sp.id) {
+      setStudentProfileId(sp.id);
+    }
+
     // preload helper data to make the UX smooth
     const fetch = async () => {
       try {
@@ -167,6 +179,9 @@ const CreateModal: React.FC<CreateModalProps> = ({
       setPaymentMethod("cash");
       setReferenceNumber("");
       setReason("");
+    } else {
+      // when opening the modal, ensure paymentDate is set to today
+      setPaymentDate(new Date().toISOString().slice(0, 10));
     }
   }, [open]);
 
@@ -205,10 +220,97 @@ const CreateModal: React.FC<CreateModalProps> = ({
     setReason("");
   };
 
+  // compute selected balance amount and validate amountPaid against it
+  const selectedBalanceAmount = useMemo(() => {
+    const b = balances.find((bb) => bb.id === balanceId);
+    return b ? Number(b.amount_due) : null;
+  }, [balances, balanceId]);
+
+  const amountPaidNum = useMemo(() => Number(amountPaid || 0), [amountPaid]);
+
+  const amountWithinBalance = useMemo(() => {
+    // if there's no selected balance, allow any amount (server-side should validate further)
+    if (selectedBalanceAmount === null || selectedBalanceAmount === undefined)
+      return true;
+    return amountPaidNum <= selectedBalanceAmount;
+  }, [selectedBalanceAmount, amountPaidNum]);
+
+  // Placeholder for transaction handling: update the associated balance after a payment is recorded.
+  // TODO: implement actual transactional logic (e.g., DB transaction, ledger entries, notifications)
+  const updateAssociatedBalanceTransaction = async (
+    paymentId: string | number | null,
+    balanceIdParam: string | null,
+    paidAmount: number
+  ) => {
+    // Safely update the associated balance after a payment is created.
+    // Steps:
+    // 1) Verify the balance exists in the DB
+    // 2) Validate paidAmount is positive and does not exceed current amount_due
+    // 3) Update the balance.amount_due = amount_due - paidAmount
+    // NOTE: For full transactional safety you should implement this as a DB-side
+    // transaction (stored procedure / RPC). This client-side flow attempts to
+    // be defensive and surfaces errors cleanly.
+    if (!balanceIdParam) {
+      // nothing to do
+      return true;
+    }
+
+    try {
+      // 1) fetch balance
+      const { data: balanceRow, error: fetchErr } = await supabase
+        .from("balances")
+        .select("id, amount_due")
+        .eq("id", balanceIdParam)
+        .single();
+      if (fetchErr) {
+        console.error("Failed to fetch balance", fetchErr);
+        throw fetchErr;
+      }
+      if (!balanceRow) {
+        throw new Error("Associated balance not found");
+      }
+
+      const currentDue = Number(balanceRow.amount_due || 0);
+      const paid = Number(paidAmount || 0);
+
+      // 2) validate
+      if (paid <= 0) {
+        throw new Error("Invalid paid amount");
+      }
+      if (paid > currentDue) {
+        // This should have been caught earlier on the client; double-check here
+        throw new Error("Paid amount exceeds balance amount_due");
+      }
+
+      const newDue = Number((currentDue - paid).toFixed(2));
+
+      // 3) update the balance row
+      const { data: updated, error: updateErr } = await supabase
+        .from("balances")
+        .update({ amount_due: newDue, updated_at: new Date().toISOString() })
+        .eq("id", balanceIdParam)
+        .select("id, amount_due")
+        .single();
+
+      if (updateErr) {
+        console.error("Failed to update balance", updateErr);
+        throw updateErr;
+      }
+
+      // Optionally, you could insert an audit/log row linking paymentId -> balance here.
+      return true;
+    } catch (e) {
+      console.error("updateAssociatedBalanceTransaction error:", e);
+      // bubble up so callers can decide how to handle failure
+      throw e;
+    }
+  };
+
   const canProceed = useMemo(() => {
     if (entity === "enrollments") {
       // require a selected course and a year level within the course's allowed years
-      if (!sp || !courseId) return false;
+      // allow either a signed-in student profile (sp) or an admin-selected studentProfileId
+      if (!(sp || studentProfileId) || !courseId) return false;
       const course = courses.find((c) => c.id === courseId);
       const maxYears = (course && Number(course.years)) || 4;
       const yl = Number(yearLevel) || 1;
@@ -217,9 +319,12 @@ const CreateModal: React.FC<CreateModalProps> = ({
     // for payments require an associated balance and an amount
     // if the user has balances, ensure we have linked one; otherwise allow payment without balances
     if (balances.length > 0) {
-      return !!sp && !!amountPaid && !!balanceId;
+      // require signed-in student, amount, a linked balance, and that the amount
+      // does not exceed the selected balance's amount_due
+      return !!sp && !!amountPaid && !!balanceId && amountWithinBalance;
     }
-    return !!sp && !!amountPaid;
+    // if no balances are present, allow payment as long as there's a student and an amount
+    return !!sp && !!amountPaid && amountWithinBalance;
   }, [entity, sp, courseId, amountPaid]);
 
   const handleSubmit = async () => {
@@ -255,29 +360,14 @@ const CreateModal: React.FC<CreateModalProps> = ({
           course_id: courseId,
           year_level: year_level_string,
           semester: semester_string,
-          school_year: schoolYear,
+          // if signed-in student, enforce the immutable current academic year range
+          school_year: sp && sp.id ? academicYearRange : schoolYear,
           section: section || null,
           status: status || "pending",
         } as any;
 
         const { error } = await supabase
           .from("enrollments")
-          .insert(payload)
-          .select("id");
-        if (error) throw error;
-      } else if (entity === "payments") {
-        const payload = {
-          student_profile_id: targetProfileId,
-          balance_id: balanceId || null,
-          amount_paid: Number(amountPaid) || 0,
-          payment_date: paymentDate || new Date().toISOString(),
-          payment_method: paymentMethod,
-          reference_number: referenceNumber || null,
-          reason: reason || null,
-        } as any;
-
-        const { error } = await supabase
-          .from("payments")
           .insert(payload)
           .select("id");
         if (error) throw error;
@@ -319,27 +409,90 @@ const CreateModal: React.FC<CreateModalProps> = ({
           .insert(payload)
           .select("id");
         if (error) throw error;
-      } else if (entity === "subjects") {
+      } else if (entity === "payments") {
+        // Build payload without reference_number. Prefer DB-side auto-generation.
         const payload = {
-          course_id: courseId || null,
-          subject_code: subjectCode,
-          subject_name: subjectName,
-          units: subjectUnits,
-          semester: subjectSemester,
+          student_profile_id: targetProfileId,
+          balance_id: balanceId || null,
+          amount_paid: Number(amountPaid) || 0,
+          payment_date: paymentDate || new Date().toISOString().slice(0, 10),
+          payment_method: paymentMethod,
+          reason: reason || null,
         } as any;
-        const { error } = await supabase
-          .from("subjects")
+
+        // validate amount against balance before attempting insert
+        if (!amountWithinBalance) {
+          setSubmitting(false);
+          return toast({
+            title: "Invalid amount",
+            description: "The payment amount cannot exceed the linked balance.",
+            variant: "destructive",
+          });
+        }
+
+        // Try insert without reference_number first. If DB requires it and
+        // returns a NOT NULL / constraint error, generate a client-side
+        // reference and retry once.
+        let insertResult = await supabase
+          .from("payments")
           .insert(payload)
           .select("id");
-        if (error) throw error;
-      }
 
-      toast({
-        title: "Created",
-        description: `New ${entity.slice(0, -1)} created successfully.`,
-      });
-      onCreated && onCreated();
-      onOpenChange(false);
+        if (insertResult.error) {
+          const msg = String(
+            (insertResult.error as any)?.message || ""
+          ).toLowerCase();
+          const needsRef =
+            msg.includes("reference_number") ||
+            msg.includes("not null") ||
+            msg.includes("null value");
+          if (needsRef) {
+            const genRef = `REF-${Date.now()
+              .toString(36)
+              .toUpperCase()}-${Math.random()
+              .toString(36)
+              .slice(2, 8)
+              .toUpperCase()}`;
+            const payloadWithRef = {
+              ...payload,
+              reference_number: genRef,
+            } as any;
+            const retry = await supabase
+              .from("payments")
+              .insert(payloadWithRef)
+              .select("id");
+            if (retry.error) throw retry.error;
+            insertResult = retry;
+          } else {
+            throw insertResult.error;
+          }
+        }
+
+        // At this point the payment has been created. Optionally update linked balance.
+        const createdId =
+          insertResult.data && insertResult.data[0]
+            ? insertResult.data[0].id
+            : null;
+        try {
+          await updateAssociatedBalanceTransaction(
+            createdId,
+            balanceId,
+            amountPaidNum
+          );
+        } catch (upErr) {
+          console.warn(
+            "Failed to update associated balance (placeholder)",
+            upErr
+          );
+        }
+
+        toast({
+          title: "Created",
+          description: `New ${entity.slice(0, -1)} created successfully.`,
+        });
+        onCreated && onCreated();
+        onOpenChange(false);
+      }
     } catch (err) {
       console.error("Create error:", err);
       toast({
@@ -462,10 +615,20 @@ const CreateModal: React.FC<CreateModalProps> = ({
 
                   <div>
                     <Label>School Year</Label>
-                    <Input
-                      value={schoolYear}
-                      onChange={(e: any) => setSchoolYear(e.target.value)}
-                    />
+                    {sp && sp.id ? (
+                      <>
+                        <div className="font-medium">{academicYearRange}</div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          School year is automatically set to the current
+                          academic year and cannot be changed from this modal.
+                        </p>
+                      </>
+                    ) : (
+                      <Input
+                        value={schoolYear}
+                        onChange={(e: any) => setSchoolYear(e.target.value)}
+                      />
+                    )}
                   </div>
 
                   <div>
@@ -506,26 +669,42 @@ const CreateModal: React.FC<CreateModalProps> = ({
                     </Select>
                   </div>
                   <div>
-                    <Label>Student (admin)</Label>
-                    <Select
-                      value={studentProfileId ?? ""}
-                      onValueChange={(v) => setStudentProfileId(v || null)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select student (optional)" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          <SelectLabel>Students</SelectLabel>
-                          {studentProfiles.map((s) => (
-                            <SelectItem key={s.id} value={s.id}>
-                              {s.users?.student_number} - {s.users?.first_name}{" "}
-                              {s.users?.last_name}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
+                    {sp && sp.id ? (
+                      <>
+                        <Label>Student</Label>
+                        <div className="font-medium">
+                          {userProfile.first_name} {userProfile.middle_name[0]}.{" "}
+                          {userProfile.last_name}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          This record will be created for the signed-in student
+                          and cannot be changed here.
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <Label>Student (admin)</Label>
+                        <Select
+                          value={studentProfileId ?? ""}
+                          onValueChange={(v) => setStudentProfileId(v || null)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select student (optional)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              <SelectLabel>Students</SelectLabel>
+                              {studentProfiles.map((s) => (
+                                <SelectItem key={s.id} value={s.id}>
+                                  {s.users?.student_number} -{" "}
+                                  {s.users?.first_name} {s.users?.last_name}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                      </>
+                    )}
                   </div>
                   {/* status is forced to pending for new enrollments */}
                 </>
@@ -554,15 +733,27 @@ const CreateModal: React.FC<CreateModalProps> = ({
                       onChange={(e: any) => setAmountPaid(e.target.value)}
                       placeholder="0.00"
                     />
+                    {!amountWithinBalance && (
+                      <p className="text-xs text-destructive mt-1">
+                        Amount exceeds the linked balance. Please enter a lower
+                        amount.
+                      </p>
+                    )}
                   </div>
 
                   <div>
                     <Label>Payment Date</Label>
-                    <Input
-                      type="date"
-                      value={paymentDate}
-                      onChange={(e: any) => setPaymentDate(e.target.value)}
-                    />
+                    {sp && sp.id ? (
+                      <div className="mt-2">
+                        <div className="text-sm font-medium">{paymentDate}</div>
+                      </div>
+                    ) : (
+                      <Input
+                        type="date"
+                        value={paymentDate}
+                        onChange={(e: any) => setPaymentDate(e.target.value)}
+                      />
+                    )}
                   </div>
 
                   <div>
@@ -591,12 +782,11 @@ const CreateModal: React.FC<CreateModalProps> = ({
                   </div>
 
                   <div className="md:col-span-2">
-                    <Label>Reference</Label>
-                    <Input
-                      value={referenceNumber}
-                      onChange={(e: any) => setReferenceNumber(e.target.value)}
-                      placeholder="Reference number or short note"
-                    />
+                    {/* Reference numbers are autogenerated by the system/back-end when possible.
+                        We don't show a reference input for normal flows to avoid users entering
+                        potentially conflicting values. If the DB requires a reference and does
+                        not auto-generate it, the client will attempt a single retry with a
+                        generated reference. */}
                   </div>
                   <div className="md:col-span-2">
                     <Label>Reason</Label>
@@ -779,11 +969,15 @@ const CreateModal: React.FC<CreateModalProps> = ({
                         Student
                       </div>
                       <div className="font-medium">
-                        {(
-                          studentProfiles.find(
-                            (s) => s.id === studentProfileId
-                          ) || {}
-                        ).users?.student_number || studentProfileId}
+                        {sp && studentProfileId === sp.id
+                          ? `${sp.users?.student_number || sp.id} - ${
+                              sp.users?.first_name || ""
+                            } ${sp.users?.last_name || ""}`
+                          : (
+                              studentProfiles.find(
+                                (s) => s.id === studentProfileId
+                              ) || {}
+                            ).users?.student_number || studentProfileId}
                       </div>
                     </div>
                   )}
@@ -804,12 +998,7 @@ const CreateModal: React.FC<CreateModalProps> = ({
                     <div className="text-xs text-muted-foreground">Method</div>
                     <div className="font-medium">{paymentMethod}</div>
                   </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground">
-                      Reference
-                    </div>
-                    <div className="font-medium">{referenceNumber || "-"}</div>
-                  </div>
+                  {/* Reference removed from preview - managed by backend or stored separately */}
                   <div className="md:col-span-2">
                     <div className="text-xs text-muted-foreground">Reason</div>
                     <div className="font-medium">{reason || "-"}</div>

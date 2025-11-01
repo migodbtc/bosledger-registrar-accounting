@@ -1,0 +1,27 @@
+{
+  "id": "result-1761646331748",
+  "testCase": {
+    "id": "mod4-test5",
+    "module": "Mod 4: Student Operations",
+    "title": "Complete operations within 'My Balances' page",
+    "prerequisites": [
+      "Logged-in student account with existing balance data"
+    ],
+    "steps": [
+      "View current balance and related transactions"
+    ],
+    "successCriteria": "Balance data displays correctly with no rendering or logic errors; no unauthorized modifications allowed; data integrity maintained."
+  },
+  "testerName": "Carmelo John Cruz",
+  "testDate": "2025-10-28T10:12:11.748Z",
+  "moduleType": "Mod 4: Student Operations",
+  "grading": {
+    "functionalAccuracy": 3,
+    "systemStability": 4,
+    "uiuxConsistency": 4,
+    "securityAccess": 4,
+    "performanceResponsiveness": 4
+  },
+  "notes": "Fix the user flow when it comes to how payment is functioning. Also implement the features as well",
+  "status": "partial"
+}

@@ -1,0 +1,29 @@
+{
+  "id": "result-1761645062284",
+  "testCase": {
+    "id": "mod4-test3",
+    "module": "Mod 4: Student Operations",
+    "title": "Complete operations within the 'My Enrollments' page",
+    "prerequisites": [
+      "Logged-in student account",
+      "Access to enrollment module"
+    ],
+    "steps": [
+      "View existing enrollments",
+      "Create a new enrollment (if applicable)"
+    ],
+    "successCriteria": "Viewing and creation both function correctly; proper success messages appear; no unauthorized updates or deletions possible."
+  },
+  "testerName": "Carmelo John Cruz",
+  "testDate": "2025-10-28T09:51:02.284Z",
+  "moduleType": "Mod 4: Student Operations",
+  "grading": {
+    "functionalAccuracy": 4,
+    "systemStability": 3,
+    "uiuxConsistency": 4,
+    "securityAccess": 3,
+    "performanceResponsiveness": 4
+  },
+  "notes": "I should only be able to see my own enrollment status case and not have access to others enrollment status when in student role",
+  "status": "partial"
+}

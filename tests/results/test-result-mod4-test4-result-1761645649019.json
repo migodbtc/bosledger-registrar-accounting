@@ -1,0 +1,29 @@
+{
+  "id": "result-1761645649019",
+  "testCase": {
+    "id": "mod4-test4",
+    "module": "Mod 4: Student Operations",
+    "title": "Complete operations within the 'My Payments' page",
+    "prerequisites": [
+      "Logged-in student account",
+      "Existing payment records"
+    ],
+    "steps": [
+      "View payment history",
+      "Add or submit a payment (if supported)"
+    ],
+    "successCriteria": "All viewing and submission operations complete successfully; no update/delete options are available; errors and permissions handled properly."
+  },
+  "testerName": "Carmelo John Cruz",
+  "testDate": "2025-10-28T10:00:49.019Z",
+  "moduleType": "Mod 4: Student Operations",
+  "grading": {
+    "functionalAccuracy": 4,
+    "systemStability": 4,
+    "uiuxConsistency": 5,
+    "securityAccess": 4,
+    "performanceResponsiveness": 5
+  },
+  "notes": "Payment date should automatically be set to the actual date instead of setting it up manually. All data inputted is inserted and is readable",
+  "status": "passed"
+}

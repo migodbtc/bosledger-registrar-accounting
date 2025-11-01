@@ -41,6 +41,7 @@ const MyEnrollments = () => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [sortBy, setSortBy] = useState<string | null>("created_at");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
@@ -103,6 +104,13 @@ const MyEnrollments = () => {
 
     fetchEnrollments();
   }, [userProfile, page, pageSize, sortBy, sortDir]);
+
+  // include refreshKey to allow manual refresh after creating an enrollment
+  useEffect(() => {
+    // bumping refreshKey should refetch via the main effect above by resetting page
+    // we simply ensure the effect runs by setting page to 1 when refreshKey changes
+    setPage(1);
+  }, [refreshKey]);
 
   const handleSort = (column: string) => {
     if (sortBy === column) {
@@ -597,7 +605,9 @@ const MyEnrollments = () => {
         entity="enrollments"
         onCreated={() => {
           // simple refresh: go to first page and rely on effect to fetch
+          // ensure we reset to first page and trigger a refetch
           setPage(1);
+          setRefreshKey((k) => k + 1);
         }}
       />
     </DashboardLayout>

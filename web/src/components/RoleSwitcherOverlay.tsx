@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 
 const ROLES = [
+  "user",
   "student",
   "registrar",
   "accounting",

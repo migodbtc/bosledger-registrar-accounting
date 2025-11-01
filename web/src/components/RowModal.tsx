@@ -109,6 +109,27 @@ const RowModal: React.FC<RowModalProps> = ({
     setForm((f: any) => ({ ...f, [key]: value }));
   };
 
+  const formatDisplayValue = (key: string, value: any) => {
+    if (value === null || value === undefined || value === "") return "-";
+    // numeric amounts
+    if (/amount|paid|due/i.test(key)) {
+      const n = Number(value || 0);
+      if (Number.isNaN(n)) return String(value);
+      return `₱ ${n.toFixed(2)}`;
+    }
+    // date-like fields
+    if (/date|payment_date|due_date|created_at|updated_at/i.test(key)) {
+      try {
+        const d = new Date(value);
+        if (!isNaN(d.getTime())) return d.toLocaleDateString();
+      } catch (_) {
+        return String(value);
+      }
+    }
+    // otherwise display as string
+    return String(value);
+  };
+
   const handleSave = async () => {
     if (!row) return;
     setSaving(true);
@@ -213,18 +234,31 @@ const RowModal: React.FC<RowModalProps> = ({
             {fields.map((f) => {
               const isIdField = /id/i.test(f.key);
               const disabled = readOnly || !editing || isIdField;
+              const val = form[f.key];
               return (
                 <div key={f.key}>
                   <Label className="text-xs">{f.label}</Label>
-                  <Input
-                    value={form[f.key] ?? ""}
-                    onChange={(e: any) => handleChange(f.key, e.target.value)}
-                    disabled={disabled}
-                  />
-                  {isIdField && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      This ID field cannot be edited from the UI.
-                    </p>
+                  {readOnly ? (
+                    <div className="py-2">
+                      <div className="font-medium text-foreground">
+                        {formatDisplayValue(f.key, val)}
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <Input
+                        value={val ?? ""}
+                        onChange={(e: any) =>
+                          handleChange(f.key, e.target.value)
+                        }
+                        disabled={disabled}
+                      />
+                      {isIdField && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          This ID field cannot be edited from the UI.
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
               );

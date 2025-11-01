@@ -11,6 +11,7 @@ import {
   faCreditCard,
   faMoneyBill,
   faUser,
+  faHourglass,
   faChevronRight,
   faSignOut,
 } from "@fortawesome/free-solid-svg-icons";
@@ -72,7 +73,14 @@ const navigationItems = [
   },
   {
     title: "Account",
-    items: [{ title: "Profile", url: "/profile", icon: faUser }],
+    items: [
+      { title: "Profile", url: "/profile", icon: faUser },
+      {
+        title: "Verification",
+        url: "/verification",
+        icon: faHourglass,
+      },
+    ],
   },
 ];
 
@@ -138,6 +146,14 @@ export function AppSidebar() {
         // superadmin: allow everything (except student personal routes/student dashboard handled above)
         return true;
       });
+    }
+
+    // If the role is the initial 'user' (registered but not verified), show
+    // only the Profile and Verification pages under Account.
+    if (role === "user") {
+      return items.filter((it) =>
+        ["/profile", "/verification"].includes(it.url)
+      );
     }
 
     return items.filter((item) => {

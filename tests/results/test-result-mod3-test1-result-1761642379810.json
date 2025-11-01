@@ -1,0 +1,25 @@
+{
+  "id": "result-1761642379810",
+  "testCase": {
+    "id": "mod3-test1",
+    "module": "Mod 3: Authentication",
+    "title": "Navigate authentication pages with no errors",
+    "prerequisites": [],
+    "steps": [
+      "Navigate to both the Login and Registration pages"
+    ],
+    "successCriteria": "Both pages render correctly, with no visual or console errors, and all components are interactable."
+  },
+  "testerName": "Carmelo John Cruz",
+  "testDate": "2025-10-28T09:06:19.810Z",
+  "moduleType": "Mod 3: Authentication",
+  "grading": {
+    "functionalAccuracy": 4,
+    "systemStability": 5,
+    "uiuxConsistency": 5,
+    "securityAccess": 4,
+    "performanceResponsiveness": 5
+  },
+  "notes": "Try and improving the input validation, and also adding things like a data privacy notice or a terms and conditions checkbox during registration.",
+  "status": "passed"
+}
