@@ -1076,7 +1076,19 @@ const CreateModal: React.FC<CreateModalProps> = ({
             <div className="flex items-center space-x-2">
               {step === 1 ? (
                 <>
-                  <Button variant="ghost" onClick={() => resetInputs()}>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      // reset inputs and close the modal
+                      resetInputs();
+                      try {
+                        onOpenChange(false);
+                      } catch (e) {
+                        // defensive: ensure no crash if parent handler is missing
+                        console.warn("onOpenChange failed", e);
+                      }
+                    }}
+                  >
                     Cancel
                   </Button>
                   <Button onClick={() => setStep(2)} disabled={!canProceed}>

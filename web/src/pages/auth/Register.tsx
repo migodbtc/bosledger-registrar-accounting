@@ -25,6 +25,20 @@ import {
 } from "@/components/ui/select";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/utils/supabaseClient";
+import { toast } from "react-hot-toast";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogTrigger,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type UserRole = "student" | "registrar" | "accounting" | "admin";
 
@@ -67,6 +81,44 @@ const Register = () => {
       alert("Passwords don't match!");
       return;
     }
+    if (!acceptedTerms) {
+      toast.error("You must accept the Terms & Privacy Policy to continue.");
+      return;
+    }
+
+    // Password strength guard (should match the checks shown to the user)
+    const pwValid = validatePassword(formData.password);
+    if (!pwValid.valid) {
+      toast.error(
+        "Password does not meet the minimum complexity requirements."
+      );
+      return;
+    }
+
+    // Email duplication guard: check `users.email` uniqueness before creating auth user
+    try {
+      const { data: existing, error: checkErr } = await supabase
+        .from("users")
+        .select("id")
+        .eq("email", formData.email)
+        .maybeSingle();
+      if (checkErr) {
+        // If this is an unexpected DB error, notify and abort
+        console.error("Error checking existing email:", checkErr);
+        toast.error(
+          "Unable to verify email uniqueness. Please try again later."
+        );
+        return;
+      }
+      if (existing) {
+        toast.error("An account with this email already exists.");
+        return;
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Unable to verify email uniqueness. Please try again later.");
+      return;
+    }
     setSubmitting(true);
     try {
       // Call AuthContext signUp — do not pass userData here per instructions
@@ -80,6 +132,30 @@ const Register = () => {
       setSubmitting(false);
     }
   };
+
+  // Password validation helper
+  const validatePassword = (pw: string) => {
+    const minLen = 8;
+    const hasUpper = /[A-Z]/.test(pw);
+    const hasLower = /[a-z]/.test(pw);
+    const hasNumber = /[0-9]/.test(pw);
+    const hasSpecial = /[^A-Za-z0-9]/.test(pw);
+    const valid =
+      pw.length >= minLen && hasUpper && hasLower && hasNumber && hasSpecial;
+    return {
+      valid,
+      reasons: {
+        minLen: pw.length >= minLen,
+        hasUpper,
+        hasLower,
+        hasNumber,
+        hasSpecial,
+      },
+    };
+  };
+
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [termsOpen, setTermsOpen] = useState(false);
 
   return (
     <div className="min-h-screen flex">
@@ -206,6 +282,133 @@ const Register = () => {
                     </button>
                   </div>
                 </div>
+
+                {/* Password strength hints */}
+                <div className="text-xs text-muted-foreground">
+                  {(() => {
+                    const checks = validatePassword(formData.password).reasons;
+                    return (
+                      <ul className="space-y-1 mb-2">
+                        <li
+                          className={
+                            checks.minLen
+                              ? "text-success"
+                              : "text-muted-foreground"
+                          }
+                        >
+                          {checks.minLen ? "✓" : "○"} At least 8 characters
+                        </li>
+                        <li
+                          className={
+                            checks.hasUpper
+                              ? "text-success"
+                              : "text-muted-foreground"
+                          }
+                        >
+                          {checks.hasUpper ? "✓" : "○"} An uppercase letter
+                        </li>
+                        <li
+                          className={
+                            checks.hasLower
+                              ? "text-success"
+                              : "text-muted-foreground"
+                          }
+                        >
+                          {checks.hasLower ? "✓" : "○"} A lowercase letter
+                        </li>
+                        <li
+                          className={
+                            checks.hasNumber
+                              ? "text-success"
+                              : "text-muted-foreground"
+                          }
+                        >
+                          {checks.hasNumber ? "✓" : "○"} A number
+                        </li>
+                        <li
+                          className={
+                            checks.hasSpecial
+                              ? "text-success"
+                              : "text-muted-foreground"
+                          }
+                        >
+                          {checks.hasSpecial ? "✓" : "○"} A special character
+                          (e.g. !@#$%)
+                        </li>
+                      </ul>
+                    );
+                  })()}
+                </div>
+
+                {/* Terms & Privacy checkbox + modal */}
+                <AlertDialog open={termsOpen} onOpenChange={setTermsOpen}>
+                  <div className="flex items-start gap-2">
+                    <Checkbox
+                      id="terms"
+                      checked={acceptedTerms}
+                      onCheckedChange={(v) => setAcceptedTerms(Boolean(v))}
+                    />
+                    <Label htmlFor="terms" className="text-foreground">
+                      I agree to the{" "}
+                      <AlertDialogTrigger asChild>
+                        <button
+                          type="button"
+                          className="text-primary hover:underline"
+                        >
+                          Terms & Privacy Policy
+                        </button>
+                      </AlertDialogTrigger>
+                    </Label>
+                  </div>
+
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        Terms & Privacy Policy
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        By creating an account you agree to our Terms of Service
+                        and Privacy Policy. Please read these carefully. Your
+                        data will be handled according to the privacy rules
+                        described here.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="mt-4 max-h-64 overflow-y-auto text-sm text-muted-foreground">
+                      <p className="mb-2">Summary:</p>
+                      <p className="mb-2">
+                        • We store your email to identify your account.
+                      </p>
+                      <p className="mb-2">
+                        • We may store profile data in accordance with the
+                        Supabase schema.
+                      </p>
+                      <p className="mb-2">
+                        • You can request deletion by contacting the
+                        administrator.
+                      </p>
+                      <p className="mb-2">
+                        This is a summarized policy for the onboarding flow. For
+                        full details please consult the published policy.
+                      </p>
+                    </div>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Close</AlertDialogCancel>
+                      <AlertDialogAction asChild>
+                        <button
+                          type="button"
+                          className="bg-primary text-white px-4 py-2 rounded"
+                          onClick={() => {
+                            setAcceptedTerms(true);
+                            setTermsOpen(false);
+                            toast.success("Terms accepted");
+                          }}
+                        >
+                          Accept
+                        </button>
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
 
                 <Button
                   type="submit"

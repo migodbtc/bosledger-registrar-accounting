@@ -116,11 +116,20 @@ export function AppSidebar() {
   const filterItemsByRole = (items: any[]) => {
     // role rules (summary):
     // - all users can see Profile
+    // - users: only Profile and Verification (this is the literal 'user' role used for unverified accounts)
     // - students: see student dashboard (/dashboard/student) and personal routes (/my/*)
     // - registrar: see shared dashboard (/dashboard) and academic/registrar features; DO NOT see student personal routes (/my/*) or student dashboard
     // - accounting: see shared dashboard (/dashboard) and accounting features; DO NOT see student personal routes (/my/*) or student dashboard
     // - admin/superadmin: full access
-    if (!role) return items; // unauthenticated or unknown role -> show default
+
+    // Verification should ONLY be visible for the literal 'user' role.
+    const showVerification = role === "user";
+    // Start with a base items list where verification is removed unless the role is exactly 'user'.
+    const baseItems = showVerification
+      ? items
+      : items.filter((it) => (it && it.url) !== "/verification");
+
+    if (!role) return baseItems; // unauthenticated or unknown role -> show default (without verification)
 
     const isAdmin = role === "admin" || role === "superadmin";
     // Admins: full functional access except student personal routes (/my/*)
@@ -129,7 +138,7 @@ export function AppSidebar() {
       // "System Management" section. Admin (role === 'admin') should only
       // see the Role Manager (/roles). Superadmin keeps full access (but we
       // still hide student personal routes and student dashboard).
-      return items.filter((i) => {
+      return baseItems.filter((i) => {
         const u = (i && i.url) || "";
         // Always block student personal routes and the student dashboard
         if (u.startsWith("/my") || u === "/dashboard/student") return false;
@@ -151,12 +160,13 @@ export function AppSidebar() {
     // If the role is the initial 'user' (registered but not verified), show
     // only the Profile and Verification pages under Account.
     if (role === "user") {
-      return items.filter((it) =>
+      // For the literal 'user' role allow only profile and verification
+      return baseItems.filter((it) =>
         ["/profile", "/verification"].includes(it.url)
       );
     }
 
-    return items.filter((item) => {
+    return baseItems.filter((item) => {
       const url: string = item.url;
       // allow profile for all authenticated roles
       if (url === "/profile") return true;

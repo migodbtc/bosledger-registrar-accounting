@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faPlus,
   faMoneyBill,
   faClock,
   faExclamationTriangle,
@@ -178,13 +177,7 @@ const MyBalances: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <Button
-              className="hypatia-gradient-bg"
-              onClick={() => console.log("Make payment clicked")}
-            >
-              <FontAwesomeIcon icon={faPlus} className="mr-2" />
-              Make Payment
-            </Button>
+            {/* Top-level Make Payment button removed per request. Use actions inside the Actions card. */}
           </div>
         </div>
 
