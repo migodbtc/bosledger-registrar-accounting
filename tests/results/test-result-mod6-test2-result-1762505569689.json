@@ -1,0 +1,31 @@
+{
+  "id": "result-1762505569689",
+  "testCase": {
+    "id": "mod6-test2",
+    "module": "Mod 6: Accounting Operations",
+    "title": "Complete operations within the 'Payments' page",
+    "prerequisites": [
+      "Logged-in accounting/staff account",
+      "Access to payment records"
+    ],
+    "steps": [
+      "View all payment records",
+      "Create or record a new payment",
+      "Update payment details (if applicable)",
+      "Delete a payment record (if authorized)"
+    ],
+    "successCriteria": "All CRUD operations function correctly; updates reflect immediately on the interface and database; validation, authorization, and error handling work as expected."
+  },
+  "testerName": "Carmelo John Cruz",
+  "testDate": "2025-11-07T08:52:49.689Z",
+  "moduleType": "Mod 6: Accounting Operations",
+  "grading": {
+    "functionalAccuracy": 2,
+    "systemStability": 2,
+    "uiuxConsistency": 3,
+    "securityAccess": 5,
+    "performanceResponsiveness": 5
+  },
+  "notes": "creating new record for payment button is not working, not clickable, delete function is not working\n\nsuggestion: try to put drop down in updating dates, and changing the payment method so it will have consistency",
+  "status": "partial"
+}

@@ -1,0 +1,27 @@
+{
+  "id": "result-1762505342164",
+  "testCase": {
+    "id": "mod6-test1",
+    "module": "Mod 6: Accounting Operations",
+    "title": "Navigate the accounting-side pages with no errors",
+    "prerequisites": [
+      "Logged-in accounting/staff account"
+    ],
+    "steps": [
+      "Navigate through all accounting-side routes (Dashboard, Payments, Balances)"
+    ],
+    "successCriteria": "All pages load successfully without UI or console errors; components render correctly and are fully interactable."
+  },
+  "testerName": "Carmelo John Cruz",
+  "testDate": "2025-11-07T08:49:02.164Z",
+  "moduleType": "Mod 6: Accounting Operations",
+  "grading": {
+    "functionalAccuracy": 5,
+    "systemStability": 5,
+    "uiuxConsistency": 5,
+    "securityAccess": 5,
+    "performanceResponsiveness": 5
+  },
+  "notes": "all accounting side routes or panels is good and working properly, and looked sharp",
+  "status": "passed"
+}

@@ -21,6 +21,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import CreateModal from "@/components/CreateModal";
+import StudentRowModal from "@/components/StudentRowModal";
+import { toast } from "@/components/ui/use-toast";
 // pagination will use simple buttons (First / Prev / Next / Last) similar to MyEnrollments
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -61,6 +63,8 @@ const Students = () => {
   const [enrollments, setEnrollments] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [refreshToken, setRefreshToken] = useState(0);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedRow, setSelectedRow] = useState<any | null>(null);
 
   // Map enrollments by student_profile_id for quick lookup when rendering rows
   const enrollmentsByProfile = useMemo(() => {
@@ -183,11 +187,38 @@ const Students = () => {
   };
 
   const handleEditStudent = (id: string) => {
-    // placeholder
+    const found = students.find((s) => s.id === id) ?? null;
+    if (!found) return;
+    setSelectedRow(found);
+    setModalOpen(true);
   };
 
   const handleDeleteStudent = (id: string) => {
-    // placeholder
+    if (
+      !confirm(
+        "Delete student profile? This will remove the student_profile record (users row will remain). Continue?"
+      )
+    )
+      return;
+    (async () => {
+      try {
+        const { error } = await supabase
+          .from("student_profile")
+          .delete()
+          .eq("id", id);
+        if (error) throw error;
+        toast({ title: "Deleted", description: "Student profile deleted." });
+        // refresh current page
+        setRefreshToken((t) => t + 1);
+      } catch (err) {
+        console.error("Delete student_profile error:", err);
+        toast({
+          title: "Error",
+          description: String((err as any)?.message ?? err),
+          variant: "destructive",
+        });
+      }
+    })();
   };
 
   useEffect(() => {
@@ -377,7 +408,12 @@ const Students = () => {
                   icon={faSearch}
                   className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
                 />
-                <Input placeholder="Search students..." className="pl-10" />
+                <Input
+                  placeholder="Search students..."
+                  className="pl-10"
+                  value={searchTerm}
+                  onChange={(e: any) => setSearchTerm(e.target.value)}
+                />
               </div>
               <Select
                 value={statusFilter}
@@ -651,6 +687,16 @@ const Students = () => {
           onOpenChange={setCreateOpen}
           entity="students"
           onCreated={() => setRefreshToken((t) => t + 1)}
+        />
+        <StudentRowModal
+          open={modalOpen}
+          onOpenChange={(v) => {
+            setModalOpen(v);
+            if (!v) setSelectedRow(null);
+          }}
+          row={selectedRow}
+          onSaved={() => setRefreshToken((t) => t + 1)}
+          onDeleted={() => setRefreshToken((t) => t + 1)}
         />
       </div>
     </DashboardLayout>

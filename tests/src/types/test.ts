@@ -1,4 +1,4 @@
-export type Module = 
+export type Module =
   | "Mod 1: Foundationals"
   | "Mod 2: Basic Website Structure"
   | "Mod 3: Authentication"
@@ -34,4 +34,6 @@ export interface TestResult {
   grading: GradingCriteria;
   notes?: string;
   status: "passed" | "failed" | "partial";
+  /** filename saved by local save server (if available) */
+  savedFile?: string;
 }

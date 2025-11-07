@@ -1,0 +1,30 @@
+{
+  "id": "result-1762504998082",
+  "testCase": {
+    "id": "mod5-test5",
+    "module": "Mod 5: Registrar Operations",
+    "title": "Complete operations within the 'Subjects' page",
+    "prerequisites": [
+      "Logged-in registrar/staff account"
+    ],
+    "steps": [
+      "View existing subjects",
+      "Create a new subject",
+      "Update subject details",
+      "Delete a subject"
+    ],
+    "successCriteria": "All operations function correctly with proper data handling; UI and backend remain synchronized; permission and validation checks operate as expected."
+  },
+  "testerName": "Carmelo John Cruz",
+  "testDate": "2025-11-07T08:43:18.082Z",
+  "moduleType": "Mod 5: Registrar Operations",
+  "grading": {
+    "functionalAccuracy": 2,
+    "systemStability": 5,
+    "uiuxConsistency": 5,
+    "securityAccess": 2,
+    "performanceResponsiveness": 2
+  },
+  "notes": "same problem with courses and subjects",
+  "status": "partial"
+}

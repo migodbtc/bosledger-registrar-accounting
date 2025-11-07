@@ -1,0 +1,29 @@
+{
+  "id": "result-1762505879467",
+  "testCase": {
+    "id": "mod6-test3",
+    "module": "Mod 6: Accounting Operations",
+    "title": "Complete operations within the 'Balances' page",
+    "prerequisites": [
+      "Logged-in accounting/staff account with balance data available"
+    ],
+    "steps": [
+      "View student balance information",
+      "Update or reconcile balance entries",
+      "Delete incorrect or obsolete balance records (if permitted)"
+    ],
+    "successCriteria": "All operations complete successfully; displayed data remains accurate and synchronized; unauthorized actions are restricted; no logic, UI, or backend errors occur."
+  },
+  "testerName": "Carmelo John Cruz",
+  "testDate": "2025-11-07T08:57:59.467Z",
+  "moduleType": "Mod 6: Accounting Operations",
+  "grading": {
+    "functionalAccuracy": 2,
+    "systemStability": 2,
+    "uiuxConsistency": 4,
+    "securityAccess": 5,
+    "performanceResponsiveness": 2
+  },
+  "notes": "add balance button is not working\n\nsuggestion: try to put drop down in due date, status of the balance\n\nsearch button is functioning but partially, since it is now showing properly the name of the searched name\n\nsuggestion is to delete the \"showing page 1 of 7\" etc",
+  "status": "partial"
+}

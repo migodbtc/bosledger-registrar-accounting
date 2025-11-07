@@ -27,6 +27,7 @@ import { faCircleCheck, faArrowRight } from "@fortawesome/free-solid-svg-icons";
 type EntityType =
   | "enrollments"
   | "payments"
+  | "balances"
   | "students"
   | "courses"
   | "subjects";
@@ -35,7 +36,13 @@ type CreateModalProps = {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   entity: EntityType;
-  onCreated?: () => void;
+  // when a new row is created, the modal may pass the created row back to the caller
+  // so pages can update local state immediately without a round-trip fetch.
+  onCreated?: (created?: any) => void;
+  // allow the caller to provide a freeform student entry instead of selecting an existing profile
+  allowFreeformStudent?: boolean;
+  // optionally prefill the student number when opening the modal (admin flows)
+  initialStudentNumber?: string | null;
 };
 
 // A friendly, multi-step creation modal used for enrollments and payments.
@@ -45,6 +52,8 @@ const CreateModal: React.FC<CreateModalProps> = ({
   onOpenChange,
   entity,
   onCreated,
+  allowFreeformStudent = false,
+  initialStudentNumber = null,
 }) => {
   const { userProfile } = useAuth();
   const sp = useMemo(() => {
@@ -79,6 +88,11 @@ const CreateModal: React.FC<CreateModalProps> = ({
   // payment fields
   const [balanceId, setBalanceId] = useState<string | null>(null);
   const [amountPaid, setAmountPaid] = useState<string>("");
+  // balance creation fields
+  const [balanceAmount, setBalanceAmount] = useState<string>("");
+  const [balanceDueDate, setBalanceDueDate] = useState<string>(
+    new Date().toISOString().slice(0, 10)
+  );
   const [paymentMethod, setPaymentMethod] = useState<string>("cash");
   const [paymentDate, setPaymentDate] = useState<string>(
     new Date().toISOString().slice(0, 10)
@@ -102,17 +116,30 @@ const CreateModal: React.FC<CreateModalProps> = ({
   const [subjectName, setSubjectName] = useState<string>("");
   const [subjectUnits, setSubjectUnits] = useState<number>(3);
   const [subjectSemester, setSubjectSemester] = useState<string>("1");
+  const [subjectCourseId, setSubjectCourseId] = useState<string | null>(null);
 
   // student creation fields
   const [studentNumber, setStudentNumber] = useState<string>("");
   const [studentFirstName, setStudentFirstName] = useState<string>("");
   const [studentLastName, setStudentLastName] = useState<string>("");
   const [studentEmail, setStudentEmail] = useState<string>("");
+  // resolved lookup state (when admin enters a student number)
+  const [resolvedProfileId, setResolvedProfileId] = useState<string | null>(
+    null
+  );
+  const [resolvedBalanceId, setResolvedBalanceId] = useState<string | null>(
+    null
+  );
+  const [resolvedBalanceAmount, setResolvedBalanceAmount] = useState<
+    number | null
+  >(null);
+  const [resolvingStudent, setResolvingStudent] = useState(false);
 
   useEffect(() => {
     // If the signed-in user has a student profile, make it the default and
     // treat the student as immutable in the creation modal (no dropdown).
-    if (sp && sp.id) {
+    // Only auto-select the signed-in student's profile when freeform mode is NOT enabled.
+    if (sp && sp.id && !allowFreeformStudent) {
       setStudentProfileId(sp.id);
     }
 
@@ -172,16 +199,28 @@ const CreateModal: React.FC<CreateModalProps> = ({
       setYearLevel("1");
       setSemester("1");
       setSchoolYear(new Date().getFullYear().toString());
-      setSection("");
+      setSection("A");
       setStatus("pending");
       setBalanceId(balances.length > 0 ? balances[0].id : null);
       setAmountPaid("");
       setPaymentMethod("cash");
       setReferenceNumber("");
       setReason("");
+      // clear any selected student_profile when closing so Enrollments can pick a different student next time
+      setStudentProfileId(null);
+      // subject fields
+      setSubjectCode("");
+      setSubjectName("");
+      setSubjectUnits(3);
+      setSubjectSemester("1");
+      setSubjectCourseId(null);
+      // clear any prefilling when modal closes
+      if (!initialStudentNumber) setStudentNumber("");
     } else {
       // when opening the modal, ensure paymentDate is set to today
       setPaymentDate(new Date().toISOString().slice(0, 10));
+      // if an initial student number was provided, prefill it for the admin flow
+      if (initialStudentNumber) setStudentNumber(initialStudentNumber);
     }
   }, [open]);
 
@@ -194,6 +233,13 @@ const CreateModal: React.FC<CreateModalProps> = ({
     }
   }, [balances, entity]);
 
+  // whenever courses are available, default the subject's course selection
+  useEffect(() => {
+    if (entity === "subjects" && courses.length > 0 && !subjectCourseId) {
+      setSubjectCourseId(courses[0].id);
+    }
+  }, [courses, entity, subjectCourseId]);
+
   // clamp year level when course changes
   useEffect(() => {
     if (!courseId) return;
@@ -203,6 +249,70 @@ const CreateModal: React.FC<CreateModalProps> = ({
     if (yl > maxYears) setYearLevel(String(maxYears));
     if (yl < 1) setYearLevel("1");
   }, [courseId, courses]);
+
+  // Resolve studentNumber -> user -> student_profile -> outstanding balance
+  useEffect(() => {
+    let mounted = true;
+    const resolve = async () => {
+      setResolvingStudent(true);
+      setResolvedProfileId(null);
+      setResolvedBalanceId(null);
+      setResolvedBalanceAmount(null);
+
+      const trimmed = (studentNumber || "").toString().trim();
+      if (!trimmed || !allowFreeformStudent) {
+        setResolvingStudent(false);
+        return;
+      }
+
+      try {
+        const { data: u, error: uErr } = await supabase
+          .from("users")
+          .select("id")
+          .eq("student_number", trimmed)
+          .single();
+        if (uErr || !u) {
+          // leave resolved null — validation will show when submitting
+          setResolvingStudent(false);
+          return;
+        }
+        const uid = (u as any).id;
+        const { data: spRow, error: spErr } = await supabase
+          .from("student_profile")
+          .select("id")
+          .eq("user_id", uid)
+          .single();
+        if (spErr || !spRow) {
+          setResolvingStudent(false);
+          return;
+        }
+        if (!mounted) return;
+        setResolvedProfileId((spRow as any).id);
+
+        // find first outstanding balance for that profile
+        const { data: found, error: findErr } = await supabase
+          .from("balances")
+          .select("id,amount_due")
+          .eq("student_profile_id", (spRow as any).id)
+          .gt("amount_due", 0)
+          .order("created_at", { ascending: true })
+          .limit(1);
+        if (!findErr && found && found.length > 0) {
+          if (!mounted) return;
+          setResolvedBalanceId((found[0] as any).id);
+          setResolvedBalanceAmount(Number((found[0] as any).amount_due || 0));
+        }
+      } catch (e) {
+        console.warn("student resolve error", e);
+      } finally {
+        if (mounted) setResolvingStudent(false);
+      }
+    };
+    resolve();
+    return () => {
+      mounted = false;
+    };
+  }, [studentNumber, allowFreeformStudent]);
 
   // helper to reset inputs without closing the modal
   const resetInputs = () => {
@@ -218,6 +328,12 @@ const CreateModal: React.FC<CreateModalProps> = ({
     setPaymentMethod("cash");
     setReferenceNumber("");
     setReason("");
+    // reset subject fields as well
+    setSubjectCode("");
+    setSubjectName("");
+    setSubjectUnits(3);
+    setSubjectSemester("1");
+    setSubjectCourseId(null);
   };
 
   // compute selected balance amount and validate amountPaid against it
@@ -225,15 +341,19 @@ const CreateModal: React.FC<CreateModalProps> = ({
     const b = balances.find((bb) => bb.id === balanceId);
     return b ? Number(b.amount_due) : null;
   }, [balances, balanceId]);
-
   const amountPaidNum = useMemo(() => Number(amountPaid || 0), [amountPaid]);
 
+  // consider resolvedBalanceAmount (from studentNumber lookup) when validating
+  // amountAgainst; fallback to selectedBalanceAmount when not present
   const amountWithinBalance = useMemo(() => {
-    // if there's no selected balance, allow any amount (server-side should validate further)
-    if (selectedBalanceAmount === null || selectedBalanceAmount === undefined)
-      return true;
-    return amountPaidNum <= selectedBalanceAmount;
-  }, [selectedBalanceAmount, amountPaidNum]);
+    const balanceToCheck =
+      resolvedBalanceAmount !== null
+        ? resolvedBalanceAmount
+        : selectedBalanceAmount;
+    // if there's no balance to check, allow any amount (server-side should validate further)
+    if (balanceToCheck === null || balanceToCheck === undefined) return true;
+    return amountPaidNum <= Number(balanceToCheck);
+  }, [selectedBalanceAmount, amountPaidNum, resolvedBalanceAmount]);
 
   // Placeholder for transaction handling: update the associated balance after a payment is recorded.
   // TODO: implement actual transactional logic (e.g., DB transaction, ledger entries, notifications)
@@ -307,32 +427,104 @@ const CreateModal: React.FC<CreateModalProps> = ({
   };
 
   const canProceed = useMemo(() => {
+    // handle required-field checks per-entity so the Continue button only enables
+    // when the relevant fields for the entity are satisfied.
     if (entity === "enrollments") {
-      // require a selected course and a year level within the course's allowed years
-      // allow either a signed-in student profile (sp) or an admin-selected studentProfileId
+      // allow freeform student creation when configured (used by the Enrollments page)
+      if (allowFreeformStudent) {
+        if (!courseId) return false;
+        const course = courses.find((c) => c.id === courseId);
+        const maxYears = (course && Number(course.years)) || 4;
+        const yl = Number(yearLevel) || 1;
+        // require student_number when creating/selecting by number
+        const studentInfoOk = !!sp || !!studentNumber;
+        return studentInfoOk && yl >= 1 && yl <= maxYears;
+      }
       if (!(sp || studentProfileId) || !courseId) return false;
       const course = courses.find((c) => c.id === courseId);
       const maxYears = (course && Number(course.years)) || 4;
       const yl = Number(yearLevel) || 1;
       return yl >= 1 && yl <= maxYears;
     }
-    // for payments require an associated balance and an amount
-    // if the user has balances, ensure we have linked one; otherwise allow payment without balances
-    if (balances.length > 0) {
-      // require signed-in student, amount, a linked balance, and that the amount
-      // does not exceed the selected balance's amount_due
-      return !!sp && !!amountPaid && !!balanceId && amountWithinBalance;
+
+    if (entity === "payments") {
+      // Allow admin freeform student-number payments: if admin provided a studentNumber
+      // and freeform mode is enabled, allow proceeding when an amount is entered
+      // and it is within any selected balance constraints.
+      if (allowFreeformStudent && studentNumber) {
+        return !!amountPaid && amountWithinBalance;
+      }
+
+      if (balances.length > 0) {
+        return !!sp && !!amountPaid && !!balanceId && amountWithinBalance;
+      }
+      return !!sp && !!amountPaid && amountWithinBalance;
     }
-    // if no balances are present, allow payment as long as there's a student and an amount
-    return !!sp && !!amountPaid && amountWithinBalance;
-  }, [entity, sp, courseId, amountPaid]);
+
+    if (entity === "balances") {
+      // for balances, require a student (signed-in or selected) and amount
+      const profileOk = !!sp || !!studentProfileId || !!studentNumber;
+      return profileOk && !!balanceAmount;
+    }
+
+    if (entity === "students") {
+      return !!studentNumber && !!studentFirstName && !!studentLastName;
+    }
+
+    if (entity === "courses") {
+      return !!courseName && !!courseTitle && Number(courseYears) > 0;
+    }
+
+    if (entity === "subjects") {
+      return (
+        !!subjectCourseId &&
+        !!subjectCode &&
+        !!subjectName &&
+        Number(subjectUnits) > 0
+      );
+    }
+
+    return false;
+  }, [
+    entity,
+    sp,
+    studentProfileId,
+    courseId,
+    courses,
+    yearLevel,
+    balances,
+    balanceId,
+    amountPaid,
+    amountWithinBalance,
+    studentNumber,
+    studentFirstName,
+    studentLastName,
+    allowFreeformStudent,
+    courseName,
+    courseTitle,
+    courseYears,
+    subjectCode,
+    subjectName,
+    subjectUnits,
+    subjectCourseId,
+  ]);
 
   const handleSubmit = async () => {
     // Admin flows may not require the current signed-in student profile.
     // For student- or payment-specific creation when a student profile is needed,
     // prefer using the selected `studentProfileId` (admin) or the signed-in `sp`.
-    const targetProfileId = studentProfileId || sp?.id;
-    if ((entity === "enrollments" || entity === "payments") && !targetProfileId)
+    // When allowFreeformStudent is true, do not default to the signed-in user.
+    const targetProfileId =
+      studentProfileId || (allowFreeformStudent ? null : sp?.id);
+
+    // Allow the freeform student flow when configured and a studentNumber is provided.
+    // Admins using allowFreeformStudent should be able to create an enrollment by
+    // entering a student number (which will create a minimal user/profile if missing).
+    if (
+      (entity === "enrollments" || entity === "payments") &&
+      !targetProfileId &&
+      !(allowFreeformStudent && !!studentNumber)
+    )
       return toast({
         title: "No student",
         description:
@@ -355,8 +547,66 @@ const CreateModal: React.FC<CreateModalProps> = ({
         const semester_string =
           semester === "1" ? "1st Semester" : "2nd Semester";
 
+        // If freeform student allowed and no targetProfileId, require that
+        // the student already exists in the database. Do NOT auto-create
+        // users or student_profile records here; this flow is for enrolling
+        // existing students only.
+        let finalProfileId = targetProfileId;
+        if (!finalProfileId && allowFreeformStudent) {
+          if (!studentNumber) {
+            setSubmitting(false);
+            return toast({
+              title: "Missing student number",
+              description:
+                "Please enter a student number for freeform enrollment.",
+              variant: "destructive",
+            });
+          }
+
+          // Lookup user by student_number
+          const { data: existingUser, error: existErr } = await supabase
+            .from("users")
+            .select("id")
+            .eq("student_number", studentNumber)
+            .single();
+
+          if (existErr || !existingUser) {
+            setSubmitting(false);
+            return toast({
+              title: "Student not found",
+              description: "Student is not within the database!",
+              variant: "destructive",
+            });
+          }
+
+          const uid = (existingUser as any).id;
+
+          // Ensure a student_profile exists for that user
+          const { data: existingProfile, error: profErr } = await supabase
+            .from("student_profile")
+            .select("id, course_id")
+            .eq("user_id", uid)
+            .single();
+
+          if (profErr || !existingProfile) {
+            setSubmitting(false);
+            return toast({
+              title: "Student profile missing",
+              description: "Student is not within the database!",
+              variant: "destructive",
+            });
+          }
+
+          finalProfileId = (existingProfile as any).id;
+          // If courseId is not set for the enrollment, prefer the profile's course
+          // so we don't create inconsistent enrollment rows.
+          if (!courseId && (existingProfile as any).course_id) {
+            setCourseId((existingProfile as any).course_id);
+          }
+        }
+
         const payload = {
-          student_profile_id: targetProfileId,
+          student_profile_id: finalProfileId,
           course_id: courseId,
           year_level: year_level_string,
           semester: semester_string,
@@ -365,12 +615,47 @@ const CreateModal: React.FC<CreateModalProps> = ({
           section: section || null,
           status: status || "pending",
         } as any;
+        // Prevent duplicate enrollments: check if an enrollment already exists
+        // for this student_profile, course, semester and school year.
+        try {
+          const schoolYearToCheck = payload.school_year;
+          const { data: existingEnrollments, error: existingErr } =
+            await supabase
+              .from("enrollments")
+              .select("id")
+              .eq("student_profile_id", finalProfileId)
+              .eq("course_id", courseId)
+              .eq("semester", semester_string)
+              .eq("school_year", schoolYearToCheck)
+              .limit(1);
+          if (existingErr) {
+            // If the lookup fails, bubble up the error to be handled below
+            throw existingErr;
+          }
+          if (existingEnrollments && existingEnrollments.length > 0) {
+            setSubmitting(false);
+            return toast({
+              title: "Duplicate enrollment",
+              description:
+                "A student is already enrolled for this course, semester and school year.",
+              variant: "destructive",
+            });
+          }
+        } catch (e) {
+          throw e;
+        }
 
         const { error } = await supabase
           .from("enrollments")
           .insert(payload)
           .select("id");
         if (error) throw error;
+        toast({
+          title: "Created",
+          description: `New enrollment created successfully.`,
+        });
+        onCreated && onCreated();
+        onOpenChange(false);
       } else if (entity === "students") {
         // create student_profile and user record in users (minimal)
         // Note: in this project users and student_profile are related; here we insert a minimal student_profile row and rely on DB triggers or separate flows to create full user records.
@@ -380,23 +665,87 @@ const CreateModal: React.FC<CreateModalProps> = ({
           // We'll attempt to create a users record and then the student_profile
         } as any;
         // create users
-        const { data: userData, error: userErr } = await supabase
-          .from("users")
-          .insert({
-            student_number: studentNumber,
-            first_name: studentFirstName,
-            last_name: studentLastName,
-            email: studentEmail,
-          })
-          .select("id")
-          .single();
-        if (userErr) throw userErr;
-        const userId = (userData as any)?.id;
-        const { error: spErr } = await supabase
+        // Ensure email is NOT NULL and UNIQUE per DB schema. If an email
+        // wasn't provided, generate a unique placeholder so the insert succeeds.
+        const genEmail =
+          studentEmail && studentEmail.trim()
+            ? studentEmail.trim()
+            : `${(studentNumber || "user").replace(
+                /\s+/g,
+                "_"
+              )}+${Date.now()}@no-reply.local`;
+
+        // Try to reuse an existing user by student_number if present
+        let userId: string | null = null;
+        if (studentNumber) {
+          const { data: existingUser, error: existErr } = await supabase
+            .from("users")
+            .select("id")
+            .eq("student_number", studentNumber)
+            .single();
+          if (!existErr && existingUser) {
+            userId = (existingUser as any).id;
+          }
+        }
+
+        if (!userId) {
+          const { data: userData, error: userErr } = await supabase
+            .from("users")
+            .insert({
+              student_number: studentNumber,
+              first_name: studentFirstName,
+              last_name: studentLastName,
+              email: genEmail,
+            })
+            .select("id")
+            .single();
+          if (userErr) throw userErr;
+          userId = (userData as any)?.id;
+        }
+
+        // Ensure student_profile.course_id (NOT NULL) gets a valid value.
+        const assignedCourseIdForStudent =
+          courseId || (courses && courses.length > 0 ? courses[0].id : null);
+        if (!assignedCourseIdForStudent) {
+          throw new Error(
+            "No course available to attach to the student profile. Please create a course first."
+          );
+        }
+
+        // Reuse existing student_profile if it exists to avoid unique violations
+        const { data: existingSp, error: existingSpErr } = await supabase
           .from("student_profile")
-          .insert({ user_id: userId })
-          .select();
-        if (spErr) throw spErr;
+          .select("id")
+          .eq("user_id", userId)
+          .single();
+        if (!existingSpErr && existingSp) {
+          // student_profile already exists — treat as duplicate/create-no-op
+          toast({
+            title: "Exists",
+            description:
+              "A student profile already exists for that student number.",
+          });
+          onCreated && onCreated();
+          onOpenChange(false);
+        } else {
+          const { error: spErr } = await supabase
+            .from("student_profile")
+            .insert({ user_id: userId, course_id: assignedCourseIdForStudent })
+            .select();
+          if (spErr) throw spErr;
+          toast({
+            title: "Created",
+            description: `New student created successfully.`,
+          });
+          onCreated && onCreated();
+          onOpenChange(false);
+        }
+        toast({
+          title: "Created",
+          description: `New student created successfully.`,
+        });
+        onCreated && onCreated();
+        onOpenChange(false);
       } else if (entity === "courses") {
         const payload = {
           name: courseName,
@@ -404,31 +753,169 @@ const CreateModal: React.FC<CreateModalProps> = ({
           years: courseYears,
           department: courseDepartment || null,
         } as any;
-        const { error } = await supabase
+        // request the full created row so callers can update local state immediately
+        const { data: createdData, error } = await supabase
           .from("courses")
           .insert(payload)
-          .select("id");
+          .select("id, name, title, years, department")
+          .single();
         if (error) throw error;
+        toast({
+          title: "Created",
+          description: `New course created successfully.`,
+        });
+        onCreated && onCreated(createdData ?? null);
+        onOpenChange(false);
       } else if (entity === "payments") {
-        // Build payload without reference_number. Prefer DB-side auto-generation.
+        // Resolve student when admin entered a freeform student number.
+        // The modal allows entering a student number for admin flows; resolve
+        // it to a student_profile id here and reject if not found. Do NOT
+        // auto-create users/profiles in this flow.
+        let finalProfileId = targetProfileId;
+        if (!finalProfileId && allowFreeformStudent) {
+          if (!studentNumber) {
+            setSubmitting(false);
+            return toast({
+              title: "Missing student number",
+              description: "Please enter a student number to proceed.",
+              variant: "destructive",
+            });
+          }
+
+          const { data: u, error: uErr } = await supabase
+            .from("users")
+            .select("id")
+            .eq("student_number", studentNumber)
+            .single();
+          if (uErr || !u) {
+            setSubmitting(false);
+            return toast({
+              title: "Student not found",
+              description: "Student is not within the database!",
+              variant: "destructive",
+            });
+          }
+          const uid = (u as any).id;
+          const { data: spRow, error: spErr } = await supabase
+            .from("student_profile")
+            .select("id")
+            .eq("user_id", uid)
+            .single();
+          if (spErr || !spRow) {
+            setSubmitting(false);
+            return toast({
+              title: "Student profile missing",
+              description: "Student is not within the database!",
+              variant: "destructive",
+            });
+          }
+          finalProfileId = (spRow as any).id;
+        }
+
+        // Auto-link: if admin provided a student number (or finalProfileId is set)
+        // try to find the student's outstanding balance and use it as the
+        // linked balance. This ensures payments are recorded against the
+        // correct balance for that student.
+        let finalBalanceId: string | null = balanceId || null;
+        let balanceAmountForValidation: number | null = null;
+
+        // If we have a resolved profile id, attempt to auto-resolve a balance
+        // for that student (prefer outstanding balances amount_due > 0).
+        if (finalProfileId) {
+          try {
+            // If caller didn't select a balance or the selected balance
+            // does not belong to the resolved student, fetch the student's
+            // first outstanding balance.
+            let needFetch = false;
+            if (!finalBalanceId) needFetch = true;
+            else {
+              // verify the selected balance belongs to this profile
+              const { data: checkB, error: checkErr } = await supabase
+                .from("balances")
+                .select("id,student_profile_id,amount_due")
+                .eq("id", finalBalanceId)
+                .single();
+              if (
+                checkErr ||
+                !checkB ||
+                String(checkB.student_profile_id) !== String(finalProfileId)
+              ) {
+                needFetch = true;
+              } else {
+                balanceAmountForValidation = Number(checkB.amount_due || 0);
+              }
+            }
+
+            if (needFetch) {
+              const { data: found, error: findErr } = await supabase
+                .from("balances")
+                .select("id,amount_due,student_profile_id")
+                .eq("student_profile_id", finalProfileId)
+                .gt("amount_due", 0)
+                .order("created_at", { ascending: true })
+                .limit(1);
+              if (findErr) {
+                console.warn("Could not lookup student balance", findErr);
+              }
+              if (!found || found.length === 0) {
+                setSubmitting(false);
+                return toast({
+                  title: "No outstanding balance",
+                  description:
+                    "The student has no outstanding balance to pay against.",
+                  variant: "destructive",
+                });
+              }
+              finalBalanceId = (found[0] as any).id;
+              balanceAmountForValidation = Number(
+                (found[0] as any).amount_due || 0
+              );
+            }
+          } catch (bErr) {
+            console.error("Balance resolve error:", bErr);
+            setSubmitting(false);
+            return toast({
+              title: "Error",
+              description: "Failed to resolve student balance.",
+              variant: "destructive",
+            });
+          }
+        }
+
+        // At this point, require that there's a balance to pay against.
+        if (!finalBalanceId) {
+          setSubmitting(false);
+          return toast({
+            title: "No balance",
+            description:
+              "You must select or resolve a balance for the payment.",
+            variant: "destructive",
+          });
+        }
+
+        // Validate amount against resolved balanceAmountForValidation (if known)
+        const amtNum = Number(amountPaid) || 0;
+        if (
+          balanceAmountForValidation !== null &&
+          amtNum > balanceAmountForValidation
+        ) {
+          setSubmitting(false);
+          return toast({
+            title: "Invalid amount",
+            description:
+              "The payment amount cannot exceed the student's outstanding balance.",
+            variant: "destructive",
+          });
+        }
+
         const payload = {
-          student_profile_id: targetProfileId,
-          balance_id: balanceId || null,
-          amount_paid: Number(amountPaid) || 0,
+          student_profile_id: finalProfileId,
+          balance_id: finalBalanceId,
+          amount_paid: amtNum,
           payment_date: paymentDate || new Date().toISOString().slice(0, 10),
           payment_method: paymentMethod,
           reason: reason || null,
         } as any;
-
-        // validate amount against balance before attempting insert
-        if (!amountWithinBalance) {
-          setSubmitting(false);
-          return toast({
-            title: "Invalid amount",
-            description: "The payment amount cannot exceed the linked balance.",
-            variant: "destructive",
-          });
-        }
 
         // Try insert without reference_number first. If DB requires it and
         // returns a NOT NULL / constraint error, generate a client-side
@@ -473,11 +960,21 @@ const CreateModal: React.FC<CreateModalProps> = ({
           insertResult.data && insertResult.data[0]
             ? insertResult.data[0].id
             : null;
+        // Try fetch the full created payment row so callers can update UI
+        let createdPayment: any = null;
+        if (createdId) {
+          const { data: fetched, error: fErr } = await supabase
+            .from("payments")
+            .select("*")
+            .eq("id", createdId)
+            .single();
+          if (!fErr) createdPayment = fetched;
+        }
         try {
           await updateAssociatedBalanceTransaction(
             createdId,
-            balanceId,
-            amountPaidNum
+            finalBalanceId,
+            amtNum
           );
         } catch (upErr) {
           console.warn(
@@ -490,8 +987,124 @@ const CreateModal: React.FC<CreateModalProps> = ({
           title: "Created",
           description: `New ${entity.slice(0, -1)} created successfully.`,
         });
-        onCreated && onCreated();
+        onCreated && onCreated(createdPayment ?? null);
         onOpenChange(false);
+      }
+
+      // balances creation support
+      if (entity === "balances") {
+        try {
+          // determine target profile id (prefer selected studentProfileId or signed-in sp)
+          let targetProfileIdForBalance =
+            studentProfileId || (allowFreeformStudent ? null : sp?.id);
+
+          // If a student number was entered, always try to resolve it to a profile.
+          // This makes the balances flow require a student number instead of a dropdown.
+          if (!targetProfileIdForBalance && studentNumber) {
+            const { data: u, error: uErr } = await supabase
+              .from("users")
+              .select("id")
+              .eq("student_number", studentNumber)
+              .single();
+            if (uErr || !u)
+              throw new Error("Student is not within the database!");
+            const uid = (u as any).id;
+            const { data: spRow, error: spErr } = await supabase
+              .from("student_profile")
+              .select("id")
+              .eq("user_id", uid)
+              .single();
+            if (spErr || !spRow)
+              throw new Error("Student is not within the database!");
+            targetProfileIdForBalance = (spRow as any).id;
+          }
+
+          if (!targetProfileIdForBalance) {
+            setSubmitting(false);
+            return toast({
+              title: "No student",
+              description:
+                "You must provide a student number or be signed in as a student to create this balance.",
+              variant: "destructive",
+            });
+          }
+
+          // Guard: detect existing outstanding balances. Ask user to confirm
+          // creation of an additional balance rather than rejecting outright.
+          try {
+            const { data: existingBalances, error: ebErr } = await supabase
+              .from("balances")
+              .select("id,amount_due")
+              .eq("student_profile_id", targetProfileIdForBalance)
+              .gt("amount_due", 0)
+              .limit(1);
+            if (ebErr) {
+              // Non-fatal: log and continue; the insert may still fail downstream
+              console.warn("Could not check existing balances", ebErr);
+            } else if (existingBalances && existingBalances.length > 0) {
+              // Prompt admin to confirm creating another outstanding balance
+              const proceed = confirm(
+                "This student already has an outstanding balance. Create another? Click OK to proceed or Cancel to abort."
+              );
+              if (!proceed) {
+                setSubmitting(false);
+                return; // user chose not to create another balance
+              }
+            }
+          } catch (chkErr) {
+            console.warn("Error checking existing balances", chkErr);
+          }
+
+          const payload = {
+            student_profile_id: targetProfileIdForBalance,
+            amount_due: Number(balanceAmount) || 0,
+            due_date: balanceDueDate || new Date().toISOString().slice(0, 10),
+          } as any;
+
+          const { data: createdBal, error } = await supabase
+            .from("balances")
+            .insert(payload)
+            .select("id, student_profile_id, amount_due, due_date")
+            .single();
+          if (error) throw error;
+          toast({
+            title: "Created",
+            description: `New balance created successfully.`,
+          });
+          onCreated && onCreated(createdBal ?? null);
+          onOpenChange(false);
+        } catch (err) {
+          throw err;
+        }
+      }
+
+      // subjects creation support
+      if (entity === "subjects") {
+        try {
+          const payload = {
+            course_id: subjectCourseId || null,
+            subject_code: subjectCode || null,
+            subject_name: subjectName || null,
+            units: Number(subjectUnits) || 0,
+            semester: subjectSemester || null,
+          } as any;
+          const { data: createdSub, error } = await supabase
+            .from("subjects")
+            .insert(payload)
+            .select(
+              "id, subject_code, subject_name, units, semester, course_id"
+            )
+            .single();
+          if (error) throw error;
+          toast({
+            title: "Created",
+            description: `New subject created successfully.`,
+          });
+          onCreated && onCreated(createdSub ?? null);
+          onOpenChange(false);
+        } catch (err) {
+          throw err;
+        }
       }
     } catch (err) {
       console.error("Create error:", err);
@@ -516,7 +1129,17 @@ const CreateModal: React.FC<CreateModalProps> = ({
             <ModalTitle className="text-lg">
               {entity === "enrollments"
                 ? "Enroll in a Course"
-                : "Record a Payment"}
+                : entity === "payments"
+                ? "Record a Payment"
+                : entity === "balances"
+                ? "Add Balance"
+                : entity === "students"
+                ? "Create Student"
+                : entity === "courses"
+                ? "Create Course"
+                : entity === "subjects"
+                ? "Create Subject"
+                : "Create"}
             </ModalTitle>
           </div>
         </ModalHeader>
@@ -615,7 +1238,7 @@ const CreateModal: React.FC<CreateModalProps> = ({
 
                   <div>
                     <Label>School Year</Label>
-                    {sp && sp.id ? (
+                    {sp && sp.id && !allowFreeformStudent ? (
                       <>
                         <div className="font-medium">{academicYearRange}</div>
                         <p className="text-xs text-muted-foreground mt-1">
@@ -669,7 +1292,7 @@ const CreateModal: React.FC<CreateModalProps> = ({
                     </Select>
                   </div>
                   <div>
-                    {sp && sp.id ? (
+                    {sp && sp.id && !allowFreeformStudent ? (
                       <>
                         <Label>Student</Label>
                         <div className="font-medium">
@@ -681,6 +1304,24 @@ const CreateModal: React.FC<CreateModalProps> = ({
                           and cannot be changed here.
                         </p>
                       </>
+                    ) : allowFreeformStudent ? (
+                      <>
+                        <Label>Student Number</Label>
+                        <div>
+                          <Input
+                            placeholder="Student number"
+                            value={studentNumber}
+                            onChange={(e: any) =>
+                              setStudentNumber(e.target.value)
+                            }
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Enter the student number of an existing student. The
+                            enrollment will be rejected if the student does not
+                            exist in the database.
+                          </p>
+                        </div>
+                      </>
                     ) : (
                       <>
                         <Label>Student (admin)</Label>
@@ -689,7 +1330,7 @@ const CreateModal: React.FC<CreateModalProps> = ({
                           onValueChange={(v) => setStudentProfileId(v || null)}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Select student (optional)" />
+                            <SelectValue placeholder="Select student" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectGroup>
@@ -710,12 +1351,40 @@ const CreateModal: React.FC<CreateModalProps> = ({
                 </>
               ) : entity === "payments" ? (
                 <>
+                  <div className="md:col-span-2">
+                    <Label>Student Number</Label>
+                    <Input
+                      placeholder="Enter existing student number (e.g. 2-02-012)"
+                      value={studentNumber}
+                      onChange={(e: any) => setStudentNumber(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Enter the student number of an existing student. The
+                      payment will be rejected if the student does not exist in
+                      the database.
+                    </p>
+                  </div>
                   <div>
                     <div className="text-xs text-muted-foreground">
                       Linked Balance
                     </div>
                     <div className="font-medium">
-                      {balances.length > 0
+                      {allowFreeformStudent
+                        ? // Admin flow: show messages based on studentNumber lookup state
+                          ((): any => {
+                            const trimmed = (studentNumber || "")
+                              .toString()
+                              .trim();
+                            if (!trimmed) return "Awaiting input..";
+                            if (resolvingStudent) return "Resolving...";
+                            if (resolvedBalanceAmount !== null)
+                              return `₱ ${Number(resolvedBalanceAmount).toFixed(
+                                2
+                              )}`;
+                            return "Invalid balance";
+                          })()
+                        : // Non-admin flow: show preloaded balances or fallback
+                        balances.length > 0
                         ? `₱ ${Number(
                             (
                               balances.find((b) => b.id === balanceId) ||
@@ -725,7 +1394,6 @@ const CreateModal: React.FC<CreateModalProps> = ({
                         : "No balances"}
                     </div>
                   </div>
-
                   <div>
                     <Label>Amount</Label>
                     <Input
@@ -866,6 +1534,27 @@ const CreateModal: React.FC<CreateModalProps> = ({
               ) : entity === "subjects" ? (
                 <>
                   <div>
+                    <Label>Course</Label>
+                    <Select
+                      value={subjectCourseId ?? ""}
+                      onValueChange={(v) => setSubjectCourseId(v || null)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a course" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectLabel>Available Courses</SelectLabel>
+                          {courses.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.title || c.name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
                     <Label>Subject Code</Label>
                     <Input
                       value={subjectCode}
@@ -909,6 +1598,40 @@ const CreateModal: React.FC<CreateModalProps> = ({
                   </div>
                 </>
               ) : null}
+            </div>
+          )}
+
+          {step === 1 && entity === "balances" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <Label>Student Number</Label>
+                <Input
+                  placeholder="Enter existing student number (e.g. 2-02-012)"
+                  value={studentNumber}
+                  onChange={(e: any) => setStudentNumber(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Enter the student number of an existing student. Balance
+                  creation will be rejected if the student does not exist in the
+                  database.
+                </p>
+              </div>
+              <div>
+                <Label>Amount Due</Label>
+                <Input
+                  value={balanceAmount}
+                  onChange={(e: any) => setBalanceAmount(e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+              <div>
+                <Label>Due Date</Label>
+                <Input
+                  type="date"
+                  value={balanceDueDate}
+                  onChange={(e: any) => setBalanceDueDate(e.target.value)}
+                />
+              </div>
             </div>
           )}
 
@@ -963,7 +1686,9 @@ const CreateModal: React.FC<CreateModalProps> = ({
                     <div className="text-xs text-muted-foreground">Status</div>
                     <div className="font-medium">{status}</div>
                   </div>
-                  {studentProfileId && (
+                  {(sp && studentProfileId === sp.id) ||
+                  studentProfileId ||
+                  (allowFreeformStudent && studentNumber) ? (
                     <div>
                       <div className="text-xs text-muted-foreground">
                         Student
@@ -973,14 +1698,16 @@ const CreateModal: React.FC<CreateModalProps> = ({
                           ? `${sp.users?.student_number || sp.id} - ${
                               sp.users?.first_name || ""
                             } ${sp.users?.last_name || ""}`
-                          : (
+                          : studentProfileId
+                          ? (
                               studentProfiles.find(
                                 (s) => s.id === studentProfileId
                               ) || {}
-                            ).users?.student_number || studentProfileId}
+                            ).users?.student_number || studentProfileId
+                          : `${studentNumber || ""}`}
                       </div>
                     </div>
-                  )}
+                  ) : null}
                 </div>
               ) : entity === "payments" ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -1046,6 +1773,13 @@ const CreateModal: React.FC<CreateModalProps> = ({
                 </div>
               ) : entity === "subjects" ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <div>
+                    <div className="text-xs text-muted-foreground">Course</div>
+                    <div className="font-medium">
+                      {(courses.find((c) => c.id === subjectCourseId) || {})
+                        .title || subjectCourseId}
+                    </div>
+                  </div>
                   <div>
                     <div className="text-xs text-muted-foreground">Code</div>
                     <div className="font-medium">{subjectCode || "-"}</div>

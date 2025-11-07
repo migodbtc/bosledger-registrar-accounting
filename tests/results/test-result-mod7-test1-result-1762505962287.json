@@ -1,0 +1,27 @@
+{
+  "id": "result-1762505962287",
+  "testCase": {
+    "id": "mod7-test1",
+    "module": "Mod 7: Administrative Operations",
+    "title": "Navigate the administrative-side pages with no errors",
+    "prerequisites": [
+      "Logged-in administrator account"
+    ],
+    "steps": [
+      "Navigate through all administrative routes (Dashboard, Role Manager, Admin Manager)"
+    ],
+    "successCriteria": "All pages render correctly without UI, logic, or console errors; all interface elements are functional and navigable."
+  },
+  "testerName": "Carmelo John Cruz",
+  "testDate": "2025-11-07T08:59:22.287Z",
+  "moduleType": "Mod 7: Administrative Operations",
+  "grading": {
+    "functionalAccuracy": 5,
+    "systemStability": 5,
+    "uiuxConsistency": 5,
+    "securityAccess": 5,
+    "performanceResponsiveness": 5
+  },
+  "notes": "all side panels are working properly",
+  "status": "passed"
+}

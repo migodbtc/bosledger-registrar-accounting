@@ -1,0 +1,30 @@
+{
+  "id": "result-1762506477907",
+  "testCase": {
+    "id": "mod7-test3",
+    "module": "Mod 7: Administrative Operations",
+    "title": "Complete operations within the 'Admin Manager' page",
+    "prerequisites": [
+      "Logged-in administrator account with admin management access"
+    ],
+    "steps": [
+      "View list of admin accounts",
+      "Create or register a new admin",
+      "Update existing admin information or privileges",
+      "Delete an admin account (if authorized)"
+    ],
+    "successCriteria": "All operations perform correctly; data persists accurately; permission levels are respected; UI and backend remain consistent and error-free."
+  },
+  "testerName": "Carmelo John Cruz",
+  "testDate": "2025-11-07T09:07:57.907Z",
+  "moduleType": "Mod 7: Administrative Operations",
+  "grading": {
+    "functionalAccuracy": 5,
+    "systemStability": 5,
+    "uiuxConsistency": 5,
+    "securityAccess": 5,
+    "performanceResponsiveness": 5
+  },
+  "notes": "all working properly",
+  "status": "passed"
+}

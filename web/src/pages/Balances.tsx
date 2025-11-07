@@ -22,6 +22,8 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import RowModal from "@/components/RowModal";
+import CreateModal from "@/components/CreateModal";
+import { toast } from "@/components/ui/use-toast";
 
 type SortField = never;
 
@@ -62,8 +64,15 @@ const Balances = () => {
     const fetchBalances = async () => {
       try {
         setLoading(true);
-        const from = (currentPage - 1) * pageSize;
-        const to = from + pageSize - 1;
+        const isSearching = !!(searchTerm && searchTerm.trim() !== "");
+        // When searching, fetch a larger window so client-side filtering can
+        // find matches across what would normally be multiple pages. This
+        // avoids forcing the user to navigate pages to find a matching row.
+        const MAX_SEARCH_FETCH = 1000;
+        const from = isSearching ? 0 : (currentPage - 1) * pageSize;
+        const to = isSearching
+          ? Math.min(MAX_SEARCH_FETCH - 1, 9999)
+          : from + pageSize - 1;
 
         const { data, error, count } = await supabase
           .from("balances")
@@ -80,6 +89,15 @@ const Balances = () => {
         }
 
         const raw = (data ?? []) as any[];
+
+        // If we're in search mode and the fetch returned the MAX_SEARCH_FETCH
+        // limit, warn in console that results may be truncated. We still
+        // proceed and let the client-side filter show matching rows.
+        if (isSearching && raw.length >= MAX_SEARCH_FETCH) {
+          console.warn(
+            `Search fetched ${raw.length} rows (limit ${MAX_SEARCH_FETCH}). Results may be truncated.`
+          );
+        }
 
         const profileIds = Array.from(
           new Set(raw.map((r) => r.student_profile_id).filter(Boolean))
@@ -174,7 +192,16 @@ const Balances = () => {
         });
 
         setBalances(normalized);
-        setTotal(typeof count === "number" ? count : 0);
+        // When searching we don't rely on the server count for pagination;
+        // instead present the number of rows we fetched so the UI shows
+        // the filtered result size immediately.
+        if (isSearching) {
+          setTotal(normalized.length);
+          // ensure UI stays on first page for search results
+          setCurrentPage(1);
+        } else {
+          setTotal(typeof count === "number" ? count : 0);
+        }
       } finally {
         setLoading(false);
       }
@@ -190,10 +217,108 @@ const Balances = () => {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedRow, setSelectedRow] = useState<any | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const openModalFor = (row: any) => {
     setSelectedRow(row);
     setModalOpen(true);
+  };
+
+  const handleDeleteBalance = (id: string) => {
+    if (
+      !confirm(
+        "Delete balance? This will remove the balance record. Payments referencing this balance may prevent deletion. This cannot be undone. Continue?"
+      )
+    )
+      return;
+    (async () => {
+      try {
+        const { error } = await supabase.from("balances").delete().eq("id", id);
+        if (error) throw error;
+        // remove from local list and update total so the UI reflects deletion immediately
+        setBalances((prev) => prev.filter((b) => b.id !== id));
+        setTotal((t) => Math.max(0, t - 1));
+        toast({ title: "Deleted", description: "Balance deleted." });
+      } catch (err) {
+        console.error("Delete balance error:", err);
+        toast({
+          title: "Error",
+          description: String((err as any)?.message ?? err),
+          variant: "destructive",
+        });
+      }
+    })();
+  };
+
+  // Enrich a single balance row returned from a create RPC/insert so the UI
+  // receives the same shape used by the table (includes user, course, paid, status)
+  const enrichBalanceRow = async (r: any) => {
+    try {
+      let profile: any = null;
+      let user: any = null;
+      let course: any = null;
+      let paid = 0;
+
+      if (r?.student_profile_id) {
+        const { data: spData, error: spErr } = await supabase
+          .from("student_profile")
+          .select("id, user_id, course_id")
+          .eq("id", r.student_profile_id)
+          .single();
+        if (!spErr && spData) {
+          profile = spData;
+          if (profile?.user_id) {
+            const { data: uData, error: uErr } = await supabase
+              .from("users")
+              .select("id, student_number, first_name, last_name, email")
+              .eq("id", profile.user_id)
+              .single();
+            if (!uErr) user = uData;
+          }
+          if (profile?.course_id) {
+            const { data: cData, error: cErr } = await supabase
+              .from("courses")
+              .select("id, name, title")
+              .eq("id", profile.course_id)
+              .single();
+            if (!cErr) course = cData;
+          }
+        }
+      }
+
+      // fetch payments referencing this balance to compute 'paid'
+      if (r?.id) {
+        const { data: pData, error: pErr } = await supabase
+          .from("payments")
+          .select("amount_paid")
+          .eq("balance_id", r.id);
+        if (!pErr && pData) {
+          paid = (pData ?? []).reduce(
+            (acc: number, cur: any) => acc + Number(cur.amount_paid || 0),
+            0
+          );
+        }
+      }
+
+      const amount_due = Number(r.amount_due ?? 0);
+      const status =
+        paid >= amount_due ? "paid" : paid > 0 ? "partial" : "pending";
+
+      return {
+        id: r.id,
+        student_profile_id: r.student_profile_id,
+        amount_due: amount_due,
+        due_date: r.due_date,
+        created_at: r.created_at,
+        user,
+        course,
+        paid,
+        status,
+      };
+    } catch (err) {
+      console.error("enrichBalanceRow error:", err);
+      return r;
+    }
   };
 
   const displayed = useMemo(() => {
@@ -233,7 +358,10 @@ const Balances = () => {
               </p>
             </div>
           </div>
-          <Button className="hypatia-gradient-bg">
+          <Button
+            className="hypatia-gradient-bg"
+            onClick={() => setCreateOpen(true)}
+          >
             <FontAwesomeIcon icon={faPlus} className="mr-2" />
             Add Balance
           </Button>
@@ -326,7 +454,12 @@ const Balances = () => {
                               className="w-4 h-4"
                             />
                           </Button>
-                          <Button variant="ghost" size="sm">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteBalance(b.id)}
+                            aria-label={`Delete balance ${b.id}`}
+                          >
                             <FontAwesomeIcon
                               icon={faTrash}
                               className="w-4 h-4"
@@ -347,6 +480,23 @@ const Balances = () => {
               row={selectedRow}
               onSaved={() => setCurrentPage((p) => p)}
               onDeleted={() => setCurrentPage(1)}
+            />
+
+            <CreateModal
+              open={createOpen}
+              onOpenChange={(v) => setCreateOpen(v)}
+              entity="balances"
+              onCreated={async (created) => {
+                if (created) {
+                  const enriched = await enrichBalanceRow(created);
+                  // Prepend to local balances list so UI reflects new balance immediately
+                  setBalances((prev) => [enriched, ...prev]);
+                  setTotal((t) => t + 1);
+                  setCurrentPage(1);
+                } else {
+                  setCurrentPage(1);
+                }
+              }}
             />
 
             {totalPages > 1 && (

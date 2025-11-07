@@ -494,7 +494,16 @@ const MyPayments = () => {
         open={createOpen}
         onOpenChange={(v) => setCreateOpen(v)}
         entity="payments"
-        onCreated={() => setPage(1)}
+        onCreated={(created) => {
+          // If the modal returns the created payment row, prepend it so the UI updates immediately.
+          if (created) {
+            setPayments((prev) => [created, ...prev]);
+            setTotal((t) => t + 1);
+            setPage(1);
+          } else {
+            setPage(1);
+          }
+        }}
       />
     </DashboardLayout>
   );

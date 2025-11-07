@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ import {
 import { supabase } from "@/utils/supabaseClient";
 import RowModal from "@/components/RowModal";
 import CreateModal from "@/components/CreateModal";
+import { toast } from "@/components/ui/use-toast";
 
 const Enrollments = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -39,6 +40,27 @@ const Enrollments = () => {
   const [enrollments, setEnrollments] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
+
+  const displayedEnrollments = useMemo(() => {
+    if (!searchTerm || searchTerm.trim() === "") return enrollments ?? [];
+    const q = searchTerm.trim().toLowerCase();
+    return (enrollments ?? []).filter((enr: any) => {
+      const ref = ""; // placeholder if needed
+      const sn = enr.student_profile?.users?.student_number ?? "";
+      const fn = enr.student_profile?.users?.first_name ?? "";
+      const ln = enr.student_profile?.users?.last_name ?? "";
+      const cr = enr.courses?.name ?? "";
+      return (
+        sn.toLowerCase().includes(q) ||
+        fn.toLowerCase().includes(q) ||
+        ln.toLowerCase().includes(q) ||
+        cr.toLowerCase().includes(q) ||
+        String(enr.year_level || "")
+          .toLowerCase()
+          .includes(q)
+      );
+    });
+  }, [enrollments, searchTerm]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -112,6 +134,35 @@ const Enrollments = () => {
     setModalOpen(true);
   };
 
+  const handleDeleteEnrollment = (id: string) => {
+    if (
+      !confirm(
+        "Delete enrollment? This will remove the enrollment record. This cannot be undone. Continue?"
+      )
+    )
+      return;
+    (async () => {
+      try {
+        const { error } = await supabase
+          .from("enrollments")
+          .delete()
+          .eq("id", id);
+        if (error) throw error;
+        // remove from local state so the table updates immediately
+        setEnrollments((prev) => prev.filter((e) => e.id !== id));
+        setTotal((t) => Math.max(0, t - 1));
+        toast({ title: "Deleted", description: "Enrollment deleted." });
+      } catch (err) {
+        console.error("Delete enrollment error:", err);
+        toast({
+          title: "Error",
+          description: String((err as any)?.message ?? err),
+          variant: "destructive",
+        });
+      }
+    })();
+  };
+
   return (
     <DashboardLayout
       title="Enrollment Management"
@@ -150,7 +201,12 @@ const Enrollments = () => {
                   icon={faSearch}
                   className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
                 />
-                <Input placeholder="Search enrollments..." className="pl-10" />
+                <Input
+                  placeholder="Search enrollments..."
+                  className="pl-10"
+                  value={searchTerm}
+                  onChange={(e: any) => setSearchTerm(e.target.value)}
+                />
               </div>
               <Select
                 value={pageSize.toString()}
@@ -195,7 +251,7 @@ const Enrollments = () => {
                     </TableRow>
                   )}
 
-                  {!loading && enrollments.length === 0 && (
+                  {!loading && displayedEnrollments.length === 0 && (
                     <TableRow>
                       <TableCell
                         colSpan={8}
@@ -207,7 +263,7 @@ const Enrollments = () => {
                   )}
 
                   {!loading &&
-                    enrollments.map((enr: any) => (
+                    displayedEnrollments.map((enr: any) => (
                       <TableRow key={enr.id}>
                         <TableCell>
                           {enr.student_profile?.users
@@ -243,7 +299,12 @@ const Enrollments = () => {
                                 className="w-4 h-4"
                               />
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteEnrollment(enr.id)}
+                              aria-label={`Delete enrollment ${enr.id}`}
+                            >
                               <FontAwesomeIcon
                                 icon={faTrash}
                                 className="w-4 h-4"
@@ -330,6 +391,7 @@ const Enrollments = () => {
           open={createOpen}
           onOpenChange={(v) => setCreateOpen(v)}
           entity="enrollments"
+          allowFreeformStudent={true}
           onCreated={() => setCurrentPage(1)}
         />
       </div>

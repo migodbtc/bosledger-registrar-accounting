@@ -68,7 +68,6 @@ const navigationItems = [
     items: [
       { title: "Admin Manager", url: "/admins", icon: faUser },
       { title: "Role Manager", url: "/roles", icon: faUser },
-      { title: "E2E Runner", url: "/e2e-runner", icon: faUser },
     ],
   },
   {

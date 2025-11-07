@@ -1,0 +1,30 @@
+{
+  "id": "result-1762504593615",
+  "testCase": {
+    "id": "mod5-test3",
+    "module": "Mod 5: Registrar Operations",
+    "title": "Complete operations within the 'Students' page",
+    "prerequisites": [
+      "Logged-in registrar/staff account"
+    ],
+    "steps": [
+      "View student list",
+      "Create a new student record",
+      "Update an existing student record",
+      "Delete a student record"
+    ],
+    "successCriteria": "CRUD operations execute successfully; confirmation or success messages display; data updates persist correctly in the database; validation and permission checks are enforced."
+  },
+  "testerName": "Carmelo John Cruz",
+  "testDate": "2025-11-07T08:36:33.615Z",
+  "moduleType": "Mod 5: Registrar Operations",
+  "grading": {
+    "functionalAccuracy": 2,
+    "systemStability": 2,
+    "uiuxConsistency": 5,
+    "securityAccess": 4,
+    "performanceResponsiveness": 2
+  },
+  "notes": "in the \"create student record\" tab, the continue button is not clickable and cant go through the next tab, however the UI/UX consistency is good and precise",
+  "status": "partial"
+}

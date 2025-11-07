@@ -1,0 +1,30 @@
+{
+  "id": "result-1762505055891",
+  "testCase": {
+    "id": "mod5-test6",
+    "module": "Mod 5: Registrar Operations",
+    "title": "Complete operations within the 'Enrollments' page",
+    "prerequisites": [
+      "Logged-in registrar/staff account"
+    ],
+    "steps": [
+      "View student enrollments",
+      "Create new enrollment entries",
+      "Update enrollment data",
+      "Delete enrollment records if necessary"
+    ],
+    "successCriteria": "CRUD operations execute successfully; proper linkage between students, subjects, and courses is maintained; no data corruption or permission bypass occurs."
+  },
+  "testerName": "Carmelo John Cruz",
+  "testDate": "2025-11-07T08:44:15.891Z",
+  "moduleType": "Mod 5: Registrar Operations",
+  "grading": {
+    "functionalAccuracy": 2,
+    "systemStability": 2,
+    "uiuxConsistency": 5,
+    "securityAccess": 5,
+    "performanceResponsiveness": 2
+  },
+  "notes": "same problem with courses and students",
+  "status": "partial"
+}

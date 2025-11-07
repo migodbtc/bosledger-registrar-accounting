@@ -1,0 +1,27 @@
+{
+  "id": "result-1762503743234",
+  "testCase": {
+    "id": "mod5-test1",
+    "module": "Mod 5: Registrar Operations",
+    "title": "Navigate the registrar-side pages with no errors",
+    "prerequisites": [
+      "Logged-in registrar/staff account"
+    ],
+    "steps": [
+      "Navigate through all registrar-side routes (Dashboard, Students, Courses, Subjects, Enrollments)"
+    ],
+    "successCriteria": "All pages load successfully with no UI or console errors, all components render properly, and navigation is smooth and responsive."
+  },
+  "testerName": "Carmelo John Cruz",
+  "testDate": "2025-11-07T08:22:23.234Z",
+  "moduleType": "Mod 5: Registrar Operations",
+  "grading": {
+    "functionalAccuracy": 5,
+    "systemStability": 2,
+    "uiuxConsistency": 5,
+    "securityAccess": 5,
+    "performanceResponsiveness": 2
+  },
+  "notes": "there were some errors in delete button function in Enrollment page, also, all of the search function in every overview is not working, incuding the courses, subjects, enrollments",
+  "status": "partial"
+}

@@ -1,0 +1,28 @@
+{
+  "id": "result-1762503974167",
+  "testCase": {
+    "id": "mod5-test2",
+    "module": "Mod 5: Registrar Operations",
+    "title": "Perform quick action navigation on the staff dashboard",
+    "prerequisites": [
+      "Logged-in registrar/staff account",
+      "Staff dashboard loaded"
+    ],
+    "steps": [
+      "From the staff dashboard, click each quick action button"
+    ],
+    "successCriteria": "Each quick action button successfully redirects to its correct page, content loads accurately, and no visual or backend errors occur."
+  },
+  "testerName": "Carmelo John Cruz",
+  "testDate": "2025-11-07T08:26:14.167Z",
+  "moduleType": "Mod 5: Registrar Operations",
+  "grading": {
+    "functionalAccuracy": 5,
+    "systemStability": 5,
+    "uiuxConsistency": 5,
+    "securityAccess": 5,
+    "performanceResponsiveness": 5
+  },
+  "notes": "all quick actions buttons are good and working properly",
+  "status": "passed"
+}

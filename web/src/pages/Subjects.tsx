@@ -30,6 +30,7 @@ import {
 import { supabase } from "@/utils/supabaseClient";
 import RowModal from "@/components/RowModal";
 import CreateModal from "@/components/CreateModal";
+import { toast } from "@/components/ui/use-toast";
 
 const Subjects = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -38,6 +39,16 @@ const Subjects = () => {
   const [loading, setLoading] = useState(false);
   const [subjects, setSubjects] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
+
+  const displayed = useMemo(() => {
+    if (!searchTerm || searchTerm.trim() === "") return subjects ?? [];
+    const q = searchTerm.trim().toLowerCase();
+    return (subjects ?? []).filter((s: any) => {
+      const code = (s.subject_code || "").toString().toLowerCase();
+      const name = (s.subject_name || "").toString().toLowerCase();
+      return code.includes(q) || name.includes(q);
+    });
+  }, [subjects, searchTerm]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -81,6 +92,32 @@ const Subjects = () => {
     setModalOpen(true);
   };
 
+  const handleDeleteSubject = (id: string) => {
+    if (
+      !confirm(
+        "Delete subject? This will remove the subject record. Enlistments or curriculum links may prevent deletion due to foreign-key constraints. This cannot be undone. Continue?"
+      )
+    )
+      return;
+    (async () => {
+      try {
+        const { error } = await supabase.from("subjects").delete().eq("id", id);
+        if (error) throw error;
+        // remove subject from local state immediately and update total
+        setSubjects((prev) => prev.filter((s) => s.id !== id));
+        setTotal((t) => Math.max(0, t - 1));
+        toast({ title: "Deleted", description: "Subject deleted." });
+      } catch (err) {
+        console.error("Delete subject error:", err);
+        toast({
+          title: "Error",
+          description: String((err as any)?.message ?? err),
+          variant: "destructive",
+        });
+      }
+    })();
+  };
+
   return (
     <DashboardLayout
       title="Subject Management"
@@ -119,7 +156,12 @@ const Subjects = () => {
                   icon={faSearch}
                   className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
                 />
-                <Input placeholder="Search subjects..." className="pl-10" />
+                <Input
+                  placeholder="Search subjects..."
+                  className="pl-10"
+                  value={searchTerm}
+                  onChange={(e: any) => setSearchTerm(e.target.value)}
+                />
               </div>
               <Select
                 value={pageSize.toString()}
@@ -161,7 +203,7 @@ const Subjects = () => {
                     </TableRow>
                   )}
 
-                  {!loading && subjects.length === 0 && (
+                  {!loading && displayed.length === 0 && (
                     <TableRow>
                       <TableCell
                         colSpan={5}
@@ -173,7 +215,7 @@ const Subjects = () => {
                   )}
 
                   {!loading &&
-                    subjects.map((subj: any) => (
+                    displayed.map((subj: any) => (
                       <TableRow key={subj.id}>
                         <TableCell className="font-medium">
                           {subj.subject_code ?? "-"}
@@ -206,7 +248,12 @@ const Subjects = () => {
                                 className="w-4 h-4"
                               />
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteSubject(subj.id)}
+                              aria-label={`Delete subject ${subj.id}`}
+                            >
                               <FontAwesomeIcon
                                 icon={faTrash}
                                 className="w-4 h-4"

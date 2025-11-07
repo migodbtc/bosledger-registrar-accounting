@@ -1,18 +1,72 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TestCase, TestResult, Module } from "@/types/test";
 import { testCasesByModule, allModules } from "@/data/testCases";
 import { TestCard } from "@/components/TestCard";
 import { GradingForm } from "@/components/GradingForm";
 import { TestHistory } from "@/components/TestHistory";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ClipboardList, History, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 const Index = () => {
-  const [selectedModule, setSelectedModule] = useState<Module>("Mod 2: Basic Website Structure");
+  const [selectedModule, setSelectedModule] = useState<Module>(
+    "Mod 2: Basic Website Structure"
+  );
   const [activeTest, setActiveTest] = useState<TestCase | null>(null);
   const [testResults, setTestResults] = useState<TestResult[]>([]);
+
+  // Load saved JSON result files from the project's `/results` folder (dev-time)
+  // Uses Vite's `import.meta.glob` to discover JSON files under /results
+  useEffect(() => {
+    const loadSavedResults = async () => {
+      try {
+        // resolve all json files inside the results folder at project root
+        // use `query: '?json'` (newer Vite API) instead of deprecated `as: 'json'`
+        const modules = (import.meta as any).glob("/results/*.json", {
+          query: "?json",
+        }) as Record<string, () => Promise<TestResult>>;
+
+        const loaders = Object.values(modules || {});
+        if (loaders.length === 0) return;
+
+        const loaded = await Promise.all(
+          loaders.map((fn) =>
+            fn()
+              .then((r) => r as TestResult)
+              .catch(() => null)
+          )
+        );
+
+        const valid = (loaded.filter(Boolean) as TestResult[]).filter(Boolean);
+        if (valid.length === 0) return;
+
+        // sort newest first
+        valid.sort(
+          (a, b) =>
+            new Date(b.testDate).getTime() - new Date(a.testDate).getTime()
+        );
+
+        // merge with any existing in-memory results (mounted before or created during runtime)
+        setTestResults((prev) => {
+          const ids = new Set(prev.map((r) => r.id));
+          const toAdd = valid.filter((r) => !ids.has(r.id));
+          return [...toAdd, ...prev];
+        });
+      } catch (err) {
+        // non-fatal - if the environment doesn't support glob (production), nothing to do
+        // console.debug('No saved results found or import.meta.glob not available', err);
+      }
+    };
+
+    loadSavedResults();
+  }, []);
 
   const handleStartTest = (testCase: TestCase) => {
     setActiveTest(testCase);
@@ -23,7 +77,15 @@ const Index = () => {
   };
 
   const handleSubmitResult = (result: TestResult) => {
-    setTestResults(prev => [result, ...prev]);
+    setTestResults((prev) => {
+      const idx = prev.findIndex((r) => r.id === result.id);
+      if (idx !== -1) {
+        const copy = prev.slice();
+        copy[idx] = result;
+        return copy;
+      }
+      return [result, ...prev];
+    });
     setActiveTest(null);
     toast.success("Test result submitted successfully!");
   };
@@ -71,16 +133,21 @@ const Index = () => {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="tests" className="space-y-6">
+            <TabsContent value="tests" className="space-y-6 px-12 md:px-48">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-2xl font-semibold">Available Test Cases</h2>
+                  <h2 className="text-2xl font-semibold">
+                    Available Test Cases
+                  </h2>
                   <p className="text-muted-foreground mt-1">
                     Select a module to view and execute test cases
                   </p>
                 </div>
-                
-                <Select value={selectedModule} onValueChange={(value) => setSelectedModule(value as Module)}>
+
+                <Select
+                  value={selectedModule}
+                  onValueChange={(value) => setSelectedModule(value as Module)}
+                >
                   <SelectTrigger className="w-full sm:w-[300px]">
                     <SelectValue placeholder="Select module" />
                   </SelectTrigger>
@@ -107,7 +174,9 @@ const Index = () => {
               ) : (
                 <div className="text-center py-12 border-2 border-dashed rounded-lg">
                   <ClipboardList className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Test Cases Available</h3>
+                  <h3 className="text-lg font-semibold mb-2">
+                    No Test Cases Available
+                  </h3>
                   <p className="text-muted-foreground">
                     No test cases have been defined for {selectedModule} yet.
                   </p>
@@ -115,7 +184,7 @@ const Index = () => {
               )}
             </TabsContent>
 
-            <TabsContent value="history" className="space-y-6">
+            <TabsContent value="history" className="space-y-6 px-12 md:px-48">
               <div>
                 <h2 className="text-2xl font-semibold">Test History</h2>
                 <p className="text-muted-foreground mt-1">

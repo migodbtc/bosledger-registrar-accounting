@@ -1,0 +1,30 @@
+{
+  "id": "result-1762506240359",
+  "testCase": {
+    "id": "mod7-test2",
+    "module": "Mod 7: Administrative Operations",
+    "title": "Complete operations within the 'Role Manager' page",
+    "prerequisites": [
+      "Logged-in administrator account with role management privileges"
+    ],
+    "steps": [
+      "View existing roles and permissions",
+      "Create a new role",
+      "Update role details or assigned permissions",
+      "Delete roles as necessary"
+    ],
+    "successCriteria": "All CRUD operations execute successfully; changes reflect across affected user accounts; permission and validation checks are enforced; no backend or interface errors occur."
+  },
+  "testerName": "Carmelo John Cruz",
+  "testDate": "2025-11-07T09:04:00.359Z",
+  "moduleType": "Mod 7: Administrative Operations",
+  "grading": {
+    "functionalAccuracy": 5,
+    "systemStability": 5,
+    "uiuxConsistency": 5,
+    "securityAccess": 5,
+    "performanceResponsiveness": 5
+  },
+  "notes": "all working properly",
+  "status": "passed"
+}

@@ -30,6 +30,7 @@ import {
 import { supabase } from "@/utils/supabaseClient";
 import RowModal from "@/components/RowModal";
 import CreateModal from "@/components/CreateModal";
+import { toast } from "@/components/ui/use-toast";
 
 const Courses = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -41,12 +42,27 @@ const Courses = () => {
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
+  const displayed = useMemo(() => {
+    if (!searchTerm || searchTerm.trim() === "") return courses ?? [];
+    const q = searchTerm.trim().toLowerCase();
+    return (courses ?? []).filter((c: any) => {
+      const name = (c.name || "").toString().toLowerCase();
+      const title = (c.title || "").toString().toLowerCase();
+      const dept = (c.department || "").toString().toLowerCase();
+      return name.includes(q) || title.includes(q) || dept.includes(q);
+    });
+  }, [courses, searchTerm]);
+
   useEffect(() => {
     const fetchCourses = async () => {
       try {
         setLoading(true);
-        const from = (currentPage - 1) * pageSize;
-        const to = from + pageSize - 1;
+        const isSearching = !!(searchTerm && searchTerm.trim() !== "");
+        const MAX_SEARCH_FETCH = 1000;
+        const from = isSearching ? 0 : (currentPage - 1) * pageSize;
+        const to = isSearching
+          ? Math.min(MAX_SEARCH_FETCH - 1, 9999)
+          : from + pageSize - 1;
 
         const { data, error, count } = await supabase
           .from("courses")
@@ -60,8 +76,19 @@ const Courses = () => {
           setCourses([]);
           setTotal(0);
         } else {
-          setCourses((data ?? []) as any[]);
-          setTotal(typeof count === "number" ? count : 0);
+          const fetched = (data ?? []) as any[];
+          if (isSearching && fetched.length >= MAX_SEARCH_FETCH) {
+            console.warn(
+              `Search fetched ${fetched.length} rows (limit ${MAX_SEARCH_FETCH}). Results may be truncated.`
+            );
+          }
+          setCourses(fetched);
+          if (isSearching) {
+            setTotal(fetched.length);
+            setCurrentPage(1);
+          } else {
+            setTotal(typeof count === "number" ? count : 0);
+          }
         }
       } finally {
         setLoading(false);
@@ -78,6 +105,32 @@ const Courses = () => {
   const openModalFor = (row: any) => {
     setSelectedRow(row);
     setModalOpen(true);
+  };
+
+  const handleDeleteCourse = (id: string) => {
+    if (
+      !confirm(
+        "Delete course? This will remove the course record. Related subjects, enrollments, or student profiles may prevent deletion due to foreign-key constraints. This cannot be undone. Continue?"
+      )
+    )
+      return;
+    (async () => {
+      try {
+        const { error } = await supabase.from("courses").delete().eq("id", id);
+        if (error) throw error;
+        // update local state so the row disappears immediately
+        setCourses((prev) => prev.filter((c) => c.id !== id));
+        setTotal((t) => Math.max(0, t - 1));
+        toast({ title: "Deleted", description: "Course deleted." });
+      } catch (err) {
+        console.error("Delete course error:", err);
+        toast({
+          title: "Error",
+          description: String((err as any)?.message ?? err),
+          variant: "destructive",
+        });
+      }
+    })();
   };
 
   // expose fetchCourses to be callable after save/delete by triggering a page refresh
@@ -120,7 +173,12 @@ const Courses = () => {
                   icon={faSearch}
                   className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
                 />
-                <Input placeholder="Search courses..." className="pl-10" />
+                <Input
+                  placeholder="Search courses..."
+                  className="pl-10"
+                  value={searchTerm}
+                  onChange={(e: any) => setSearchTerm(e.target.value)}
+                />
               </div>
               <Select
                 value={pageSize.toString()}
@@ -162,7 +220,7 @@ const Courses = () => {
                     </TableRow>
                   )}
 
-                  {!loading && courses.length === 0 && (
+                  {!loading && displayed.length === 0 && (
                     <TableRow>
                       <TableCell
                         colSpan={5}
@@ -174,7 +232,7 @@ const Courses = () => {
                   )}
 
                   {!loading &&
-                    courses.map((course: any) => (
+                    displayed.map((course: any) => (
                       <TableRow key={course.id}>
                         <TableCell className="font-medium">
                           {course.name ?? course.id}
@@ -209,7 +267,12 @@ const Courses = () => {
                                 className="w-4 h-4"
                               />
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteCourse(course.id)}
+                              aria-label={`Delete course ${course.id}`}
+                            >
                               <FontAwesomeIcon
                                 icon={faTrash}
                                 className="w-4 h-4"
@@ -298,7 +361,16 @@ const Courses = () => {
           open={createOpen}
           onOpenChange={(v) => setCreateOpen(v)}
           entity="courses"
-          onCreated={() => setCurrentPage(1)}
+          onCreated={(created) => {
+            // if the modal returned the created row, add it to local state so the
+            // new course appears immediately without waiting for a refetch.
+            if (created) {
+              setCourses((prev) => [created, ...(prev || [])]);
+              setTotal((t) => t + 1);
+            }
+            // keep legacy behavior: reset to first page
+            setCurrentPage(1);
+          }}
         />
       </div>
     </DashboardLayout>

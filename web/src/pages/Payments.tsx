@@ -31,6 +31,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 // sorting removed: no sort icons imported
 import RowModal from "@/components/RowModal";
+import CreateModal from "@/components/CreateModal";
+import { toast } from "@/components/ui/use-toast";
 
 type SortField =
   | "payment_date"
@@ -113,8 +115,12 @@ const Payments = () => {
     const fetchPayments = async () => {
       try {
         setLoading(true);
-        const from = (currentPage - 1) * pageSize;
-        const to = from + pageSize - 1;
+        const isSearching = !!(searchTerm && searchTerm.trim() !== "");
+        const MAX_SEARCH_FETCH = 1000;
+        const from = isSearching ? 0 : (currentPage - 1) * pageSize;
+        const to = isSearching
+          ? Math.min(MAX_SEARCH_FETCH - 1, 9999)
+          : from + pageSize - 1;
 
         // Simpler approach: fetch payments page first, then fetch related balances,
         // student_profile rows, users and courses in follow-up queries. This avoids
@@ -153,6 +159,11 @@ const Payments = () => {
           setTotal(0);
         } else {
           const raw = (data ?? []) as any[];
+          if (isSearching && raw.length >= MAX_SEARCH_FETCH) {
+            console.warn(
+              `Search fetched ${raw.length} rows (limit ${MAX_SEARCH_FETCH}). Results may be truncated.`
+            );
+          }
 
           // collect related ids
           const profileIds = Array.from(
@@ -291,7 +302,12 @@ const Payments = () => {
           }
 
           setPayments(normalized);
-          setTotal(typeof count === "number" ? count : 0);
+          if (isSearching) {
+            setTotal(normalized.length);
+            setCurrentPage(1);
+          } else {
+            setTotal(typeof count === "number" ? count : 0);
+          }
         }
       } finally {
         setLoading(false);
@@ -305,10 +321,157 @@ const Payments = () => {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedRow, setSelectedRow] = useState<any | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const openModalFor = (row: any) => {
     setSelectedRow(row);
     setModalOpen(true);
+  };
+
+  const handleDeletePayment = (id: string) => {
+    if (
+      !confirm(
+        "Delete payment? This will remove the payment record. This cannot be undone. Continue?"
+      )
+    )
+      return;
+    (async () => {
+      try {
+        // find the payment locally so we know the linked balance and amount
+        const paymentToDelete = payments.find((p) => p.id === id) || null;
+
+        const { error } = await supabase.from("payments").delete().eq("id", id);
+        if (error) throw error;
+
+        // update local state immediately so the table re-renders without requiring a page change
+        setPayments((prev) => prev.filter((p) => p.id !== id));
+        setSelectedPayments((prev) => prev.filter((x) => x !== id));
+        setTotal((t) => Math.max(0, t - 1));
+
+        toast({ title: "Deleted", description: "Payment deleted." });
+
+        // If the deleted payment was linked to a balance, attempt to revert its effect
+        // by increasing the balance.amount_due by the deleted payment amount.
+        try {
+          const balanceId =
+            paymentToDelete?.balance?.id || paymentToDelete?.balance_id || null;
+          const paidAmount = Number(paymentToDelete?.amount_paid ?? 0);
+          if (balanceId && paidAmount > 0) {
+            // fetch current balance
+            const { data: balRow, error: balErr } = await supabase
+              .from("balances")
+              .select("id, amount_due")
+              .eq("id", balanceId)
+              .single();
+            if (!balErr && balRow) {
+              const currentDue = Number(balRow.amount_due ?? 0);
+              const newDue = Number((currentDue + paidAmount).toFixed(2));
+              const { error: updErr } = await supabase
+                .from("balances")
+                .update({
+                  amount_due: newDue,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("id", balanceId);
+              if (updErr) {
+                console.warn(
+                  "Failed to update balance after deleting payment:",
+                  updErr
+                );
+                toast({
+                  title: "Partial",
+                  description:
+                    "Payment deleted but failed to update the linked balance. Please verify balances.",
+                  variant: "destructive",
+                });
+              } else {
+                toast({
+                  title: "Balance updated",
+                  description:
+                    "Associated balance adjusted after payment deletion.",
+                });
+              }
+            }
+          }
+        } catch (balEx) {
+          console.error("Error reverting balance after payment delete:", balEx);
+        }
+      } catch (err) {
+        console.error("Delete payment error:", err);
+        toast({
+          title: "Error",
+          description: String((err as any)?.message ?? err),
+          variant: "destructive",
+        });
+      }
+    })();
+  };
+
+  // Enrich a single payment row returned from a create RPC/insert so the UI
+  // receives the same shape used by the table (includes user, course, balance)
+  const enrichPaymentRow = async (p: any) => {
+    try {
+      let profile: any = null;
+      let user: any = null;
+      let course: any = null;
+      let balance: any = null;
+
+      if (p?.student_profile_id) {
+        const { data: spData, error: spErr } = await supabase
+          .from("student_profile")
+          .select("id, user_id, course_id")
+          .eq("id", p.student_profile_id)
+          .single();
+        if (!spErr && spData) {
+          profile = spData;
+          if (profile?.user_id) {
+            const { data: uData, error: uErr } = await supabase
+              .from("users")
+              .select("id, student_number, first_name, last_name, email")
+              .eq("id", profile.user_id)
+              .single();
+            if (!uErr) user = uData;
+          }
+          if (profile?.course_id) {
+            const { data: cData, error: cErr } = await supabase
+              .from("courses")
+              .select("id, name, title")
+              .eq("id", profile.course_id)
+              .single();
+            if (!cErr) course = cData;
+          }
+        }
+      }
+
+      if (p?.balance_id) {
+        const { data: bData, error: bErr } = await supabase
+          .from("balances")
+          .select("id, student_profile_id, amount_due, due_date")
+          .eq("id", p.balance_id)
+          .single();
+        if (!bErr) balance = bData;
+      }
+
+      return {
+        id: p.id,
+        payment_date: p.payment_date,
+        amount_paid: p.amount_paid,
+        payment_method: p.payment_method,
+        reference_number: p.reference_number,
+        reason: p.reason,
+        description: p.description,
+        created_at: p.created_at,
+        student_profile_id: p.student_profile_id,
+        balance,
+        user,
+        course,
+        payment_status: null,
+      };
+    } catch (err) {
+      console.error("enrichPaymentRow error:", err);
+      // fall back to the raw created row so UI still updates
+      return p;
+    }
   };
 
   const displayed = useMemo(() => {
@@ -350,10 +513,16 @@ const Payments = () => {
               <p className="text-sm text-muted-foreground">{total} payments</p>
             </div>
           </div>
-          <Button className="hypatia-gradient-bg">
-            <FontAwesomeIcon icon={faPlus} className="mr-2" />
-            Record Payment
-          </Button>
+          <div className="flex items-center space-x-2">
+            <Button
+              className="hypatia-gradient-bg"
+              onClick={() => setCreateOpen(true)}
+              title="Record payment"
+            >
+              <FontAwesomeIcon icon={faPlus} className="mr-2" />
+              Record Payment
+            </Button>
+          </div>
         </div>
 
         <Card className="shadow-soft">
@@ -504,13 +673,23 @@ const Payments = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex justify-start space-x-2">
-                          <Button variant="ghost" size="sm" onClick={() => openModalFor(p)} aria-label={`Edit payment ${p.id}`}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openModalFor(p)}
+                            aria-label={`Edit payment ${p.id}`}
+                          >
                             <FontAwesomeIcon
                               icon={faEdit}
                               className="w-4 h-4"
                             />
                           </Button>
-                          <Button variant="ghost" size="sm">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeletePayment(p.id)}
+                            aria-label={`Delete payment ${p.id}`}
+                          >
                             <FontAwesomeIcon
                               icon={faTrash}
                               className="w-4 h-4"
@@ -531,6 +710,23 @@ const Payments = () => {
               row={selectedRow}
               onSaved={() => setCurrentPage((p) => p)}
               onDeleted={() => setCurrentPage(1)}
+            />
+
+            <CreateModal
+              open={createOpen}
+              onOpenChange={(v) => setCreateOpen(v)}
+              entity="payments"
+              allowFreeformStudent={true}
+              onCreated={async (created) => {
+                if (created) {
+                  const enriched = await enrichPaymentRow(created);
+                  setPayments((prev) => [enriched, ...prev]);
+                  setTotal((t) => t + 1);
+                  setCurrentPage(1);
+                } else {
+                  setCurrentPage(1);
+                }
+              }}
             />
 
             {totalPages > 1 && (
